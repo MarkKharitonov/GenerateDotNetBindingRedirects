@@ -1,0 +1,56 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Target Name="WriteBindingRedirects" AfterTargets="ResolveNuGetPackageAssets">
+    <PropertyGroup>
+      <GenerateBindingRedirectsExe Condition="'$(GenerateBindingRedirectsExe)' == ''">$(MSBuildThisFileDirectory)..\tools\GenerateBindingRedirects.exe</GenerateBindingRedirectsExe>
+      <SolutionsListFilePath>$(WorkspaceRoot)DayforceSolutions.txt</SolutionsListFilePath>
+      <BindingRedirectTargetFilesPath>$(BaseIntermediateOutputPath)BindingRedirectTargetFiles.txt</BindingRedirectTargetFilesPath>
+      <GenerateBindingRedirectsFlags>--projectFile $(MSBuildProjectFullPath)</GenerateBindingRedirectsFlags>
+      <GenerateBindingRedirectsFlags>$(GenerateBindingRedirectsFlags) --targetFiles $(BindingRedirectTargetFilesPath)</GenerateBindingRedirectsFlags>
+      <GenerateBindingRedirectsFlags>$(GenerateBindingRedirectsFlags) --solutions $(SolutionsListFilePath)</GenerateBindingRedirectsFlags>
+      <GenerateBindingRedirectsFlags Condition="'$(Build_BuildUri)' != ''">$(GenerateBindingRedirectsFlags) --assert</GenerateBindingRedirectsFlags>
+      <GenerateBindingRedirectsFlags Condition="'$(Build_BuildUri)' == ''">$(GenerateBindingRedirectsFlags) --writeBindingRedirects</GenerateBindingRedirectsFlags>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(GenerateBindingRedirectsForTest)' == True">
+      <CodeBaseInBindingRedirectsForTest>_BindingRedirects\$(MSBuildProjectName)</CodeBaseInBindingRedirectsForTest>
+      <GenerateBindingRedirectsFlags>$(GenerateBindingRedirectsFlags) --privateProbingPath $(CodeBaseInBindingRedirectsForTest)</GenerateBindingRedirectsFlags>
+      <BindingRedirectTargetFolder>$(OutDir)$(CodeBaseInBindingRedirectsForTest)</BindingRedirectTargetFolder>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(GenerateBindingRedirectsForTest)' != True">
+      <BindingRedirectsPath>$(WorkspaceRoot)Build\2010\Deployer\Templates\AssemblyBindingRedirects\$(MSBuildProjectName).txt</BindingRedirectsPath>
+      <GenerateBindingRedirectsFlags>$(GenerateBindingRedirectsFlags) --bindingRedirects $(BindingRedirectsPath)</GenerateBindingRedirectsFlags>
+      <BindingRedirectTargetFolder Condition="'$(WebProjectOutputDir)' != ''">$(WebProjectOutputDir)\bin\</BindingRedirectTargetFolder>
+      <BindingRedirectTargetFolder Condition="'$(WebProjectOutputDir)' == ''">$(OutDir)</BindingRedirectTargetFolder>
+    </PropertyGroup>
+
+    <Error Condition="'$(WorkspaceRoot)' == ''" Text="The WorkspaceRoot build variable must be defined." />
+    <Exec Command="$(GenerateBindingRedirectsExe) $(GenerateBindingRedirectsFlags) $(Extra_GenerateBindingRedirectsFlags)" />
+    
+    <PropertyGroup>
+      <DoNotExpectBindingRedirectTargetFiles Condition="!Exists('$(BindingRedirectTargetFilesPath)')">True</DoNotExpectBindingRedirectTargetFiles>
+      <ReplaceAppConfig Condition="'$(WebProjectOutputDir)' == '' And '$(AppConfig)' != 'app.config' And Exists('$(BindingRedirectTargetFilesPath)') And Exists('app.config')">True</ReplaceAppConfig>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(ReplaceAppConfig)' == True">
+      <AppConfig>app.config</AppConfig>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(ReplaceAppConfig)' == True">
+      <AppConfigWithTargetPath Remove="@(AppConfigWithTargetPath)" />
+      <AppConfigWithTargetPath Include="app.config">
+        <TargetPath>$(TargetFileName).config</TargetPath>
+      </AppConfigWithTargetPath>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="CopyBindingRedirectTargetFiles"
+          BeforeTargets="MvcBuildViews;AfterBuild;RunNUnit"
+          Condition="'$(DoNotExpectBindingRedirectTargetFiles)' != True">
+    <Error Condition="!Exists('$(BindingRedirectTargetFilesPath)')" Text="The file $(BindingRedirectTargetFilesPath) does not exist!" />
+    <ReadLinesFromFile File="$(BindingRedirectTargetFilesPath)">
+      <Output TaskParameter="Lines" ItemName="BindingRedirectTargetFile" />
+    </ReadLinesFromFile>
+    <Copy SourceFiles="@(BindingRedirectTargetFile)" DestinationFolder="$(BindingRedirectTargetFolder)" Retries="$(CopyRetryCount)" SkipUnchangedFiles="True" />
+  </Target>
+</Project>

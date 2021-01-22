@@ -1,0 +1,9 @@
+﻿<Project>
+  <PropertyGroup>
+    <Product>GenerateBindingRedirects</Product>
+    <AssemblyTitle>$(Product)</AssemblyTitle>
+    <Description>Automatically generates assembly binding redirects for Dayforce projects.</Description>
+    <Team>Release Engineering</Team>
+  </PropertyGroup>
+  <Import Project="$(MSBuildThisFileDirectory)\Directory.Build.Template.props" Condition="'$(TF_BUILD)' != ''"/>
+</Project>

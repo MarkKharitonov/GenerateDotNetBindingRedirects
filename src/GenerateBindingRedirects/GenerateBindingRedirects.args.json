@@ -1,0 +1,26 @@
+{
+  "FileVersion": 2,
+  "Id": "57b5c7dc-fadf-48b3-8999-8cf53b7393d2",
+  "Items": [
+    {
+      "Id": "565bdaac-f113-4118-aefb-6a244cab6af4",
+      "Command": "-w -v:c:\\temp\\1 -f c:\\Dayforce\\DevOps\\GenerateBindingRedirects\\src\\GenerateBindingRedirectsTests\\Input\\3\\Api\\Api.csproj  -s c:\\Dayforce\\DevOps\\GenerateBindingRedirects\\src\\GenerateBindingRedirectsTests\\Input\\Solutions.txt"
+    },
+    {
+      "Id": "58e91286-4f25-4e91-bd42-0a83fe96b5c8",
+      "Command": "-w -v:c:\\temp\\1 -f c:\\Dayforce\\DevOps\\GenerateBindingRedirects\\src\\GenerateBindingRedirectsTests\\Input\\1\\BJE\\BJE.csproj  -s c:\\Dayforce\\DevOps\\GenerateBindingRedirects\\src\\GenerateBindingRedirectsTests\\Input\\Solutions.txt"
+    },
+    {
+      "Id": "136cd6cb-94bc-4665-913b-93088988601c",
+      "Command": "-w -v:c:\\temp\\1 -f c:\\Dayforce\\DevOps\\GenerateBindingRedirects\\src\\GenerateBindingRedirectsTests\\Input\\1\\RuleEngineTests\\RuleEngineTests.csproj  -s c:\\Dayforce\\DevOps\\GenerateBindingRedirects\\src\\GenerateBindingRedirectsTests\\Input\\Solutions.txt"
+    },
+    {
+      "Id": "72670fb9-f204-44f0-b6bf-5a9c9d658738",
+      "Command": "-w -v:c:\\temp\\1 -f c:\\Dayforce\\DevOps\\GenerateBindingRedirects\\src\\GenerateBindingRedirectsTests\\Input\\1\\UnitTests\\UnitTests.csproj  -s c:\\Dayforce\\DevOps\\GenerateBindingRedirects\\src\\GenerateBindingRedirectsTests\\Input\\Solutions.txt"
+    },
+    {
+      "Id": "6aa1e219-d941-4ce4-8c61-fa6cf4c7d7ad",
+      "Command": "-w -v:c:\\temp\\1 -f c:\\Dayforce\\DevOps\\GenerateBindingRedirects\\src\\GenerateBindingRedirectsTests\\Input\\1\\CommonTests\\CommonTests.csproj  -s c:\\Dayforce\\DevOps\\GenerateBindingRedirects\\src\\GenerateBindingRedirectsTests\\Input\\Solutions.txt"
+    }
+  ]
+}

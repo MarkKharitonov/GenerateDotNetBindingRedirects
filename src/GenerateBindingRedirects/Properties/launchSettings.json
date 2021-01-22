@@ -1,0 +1,7 @@
+{
+  "profiles": {
+    "AnalyzeProjectAssets": {
+      "commandName": "Project"
+    }
+  }
+}
