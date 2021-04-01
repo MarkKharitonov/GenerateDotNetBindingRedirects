@@ -4,7 +4,8 @@
   <Target Name="WriteBindingRedirects" AfterTargets="ResolveNuGetPackageAssets">
     <PropertyGroup>
       <GenerateBindingRedirectsExe Condition="'$(GenerateBindingRedirectsExe)' == ''">$(MSBuildThisFileDirectory)..\tools\GenerateBindingRedirects.exe</GenerateBindingRedirectsExe>
-      <SolutionsListFilePath>$(WorkspaceRoot)DayforceSolutions.txt</SolutionsListFilePath>
+      <SolutionsListFilePath Condition="Exists('$(WorkspaceRoot)DayforceSolutions.txt')">$(WorkspaceRoot)DayforceSolutions.txt</SolutionsListFilePath>
+      <SolutionsListFilePath Condition="!Exists('$(WorkspaceRoot)DayforceSolutions.txt')">$(WorkspaceRoot)Build\projects.yml</SolutionsListFilePath>
       <BindingRedirectTargetFilesPath>$(BaseIntermediateOutputPath)BindingRedirectTargetFiles.txt</BindingRedirectTargetFilesPath>
       <GenerateBindingRedirectsFlags>--projectFile $(MSBuildProjectFullPath)</GenerateBindingRedirectsFlags>
       <GenerateBindingRedirectsFlags>$(GenerateBindingRedirectsFlags) --targetFiles $(BindingRedirectTargetFilesPath)</GenerateBindingRedirectsFlags>

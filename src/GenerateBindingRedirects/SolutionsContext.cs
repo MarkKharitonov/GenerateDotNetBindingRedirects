@@ -41,16 +41,34 @@ namespace GenerateBindingRedirects
                 ?.Split(',')
                 .ToHashSet(C.IgnoreCase);
 
+            string upDirectory;
             ProjectContext.Count = 0;
 
             m_solutions = File.ReadAllLines(solutionsListFile);
+            if (solutionsListFile.Contains("Solutions.txt"))
+            {
+                upDirectory = "\\..\\";
+            }
+            else
+            {
+                m_solutions = m_solutions
+                    .Where(line => line.StartsWith("      - name:"))
+                    .Select(name => name.Replace("      - name: ", ""))
+                    .Select(name => name.Replace("\\\\", "\\"))
+                    .Select(name => name.Replace("\'", ""))
+                    .Select(name => name + ".sln")
+                    .ToArray();
+
+                upDirectory = "\\..\\..\\";
+            }
+
             m_projectsByName = m_solutions
-                .Select(path => (Solution: SolutionFile.Parse($"{solutionsListFile}\\..\\{path}"), SolutionPath: path))
-                .SelectMany(o => o.Solution.ProjectsInOrder.Select(p => (Solution: o.SolutionPath, Project: p)))
-                .Where(o => o.Project.AbsolutePath.EndsWith(".csproj") && ignoreProjects?.Contains(o.Project.ProjectName) != true)
-                .Select(o => ProjectContext.Create(this, o.Solution, Path.GetFullPath(o.Project.AbsolutePath)))
-                .Where(pc => pc != null)
-                .ToDictionary(pc => (pc.Solution, pc.ProjectName), C.IgnoreCase2);
+                    .Select(path => (Solution: SolutionFile.Parse($"{solutionsListFile}{upDirectory}{path}"), SolutionPath: path))
+                    .SelectMany(o => o.Solution.ProjectsInOrder.Select(p => (Solution: o.SolutionPath, Project: p)))
+                    .Where(o => o.Project.AbsolutePath.EndsWith(".csproj") && ignoreProjects?.Contains(o.Project.ProjectName) != true)
+                    .Select(o => ProjectContext.Create(this, o.Solution, Path.GetFullPath(o.Project.AbsolutePath)))
+                    .Where(pc => pc != null)
+                    .ToDictionary(pc => (pc.Solution, pc.ProjectName), C.IgnoreCase2);
 
             var projectsByAssemblyName = new Dictionary<string, ProjectContext>(C.IgnoreCase);
             foreach (var pc in m_projectsByName.Values)
