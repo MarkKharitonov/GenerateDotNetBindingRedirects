@@ -52,10 +52,8 @@ namespace GenerateBindingRedirects
             else
             {
                 m_solutions = m_solutions
-                    .Where(line => line.StartsWith("      - name:"))
+                    .Where(line => line.StartsWith("      - name: "))
                     .Select(name => name.Replace("      - name: ", ""))
-                    .Select(name => name.Replace("\\\\", "\\"))
-                    .Select(name => name.Replace("\'", ""))
                     .Select(name => name + ".sln")
                     .ToArray();
 
