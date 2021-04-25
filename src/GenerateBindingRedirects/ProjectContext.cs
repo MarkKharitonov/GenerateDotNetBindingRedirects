@@ -298,7 +298,8 @@ namespace GenerateBindingRedirects
             var nsmgr = new XmlNamespaceManager(nav.NameTable);
             nav.MoveToFollowing(XPathNodeType.Element);
             var ns = nav.GetNamespacesInScope(XmlNamespaceScope.Local).FirstOrDefault();
-            nsmgr.AddNamespace("p", ns.Value);
+            var nsValue = ns.Value ?? "";
+            nsmgr.AddNamespace("p", nsValue);
             return (nav, nsmgr);
         }
         private static (XmlDocument, XmlNamespaceManager) GetProjectXmlDocument(string projectFile)

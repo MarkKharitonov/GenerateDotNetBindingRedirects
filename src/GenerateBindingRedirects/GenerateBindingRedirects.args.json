@@ -3,6 +3,10 @@
   "Id": "57b5c7dc-fadf-48b3-8999-8cf53b7393d2",
   "Items": [
     {
+      "Id": "f8db089b-5300-45bf-a884-93bfd3bb7312",
+      "Command": "--projectFile C:\\Dayforce\\tip\\DatePeriods.Test\\DatePeriods.Test.csproj --targetFiles obj\\BindingRedirectTargetFiles.txt --solutions C:\\Dayforce\\tip\\Build\\projects.yml --writeBindingRedirects --privateProbingPath _BindingRedirects\\DatePeriods.Test"
+    },
+    {
       "Id": "565bdaac-f113-4118-aefb-6a244cab6af4",
       "Command": "-w -v:c:\\temp\\1 -f c:\\Dayforce\\DevOps\\GenerateBindingRedirects\\src\\GenerateBindingRedirectsTests\\Input\\3\\Api\\Api.csproj  -s c:\\Dayforce\\DevOps\\GenerateBindingRedirects\\src\\GenerateBindingRedirectsTests\\Input\\Solutions.txt"
     },
