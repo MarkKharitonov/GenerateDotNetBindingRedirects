@@ -45,14 +45,14 @@ namespace GenerateBindingRedirects
 
                 if (framework == null)
                 {
-                    PackageFolder = projectAssets.PackageFolders[0].Path;
+                    PackageFolder = YieldMainPackageFolders(projectAssets).First().Path;
                     framework = projectAssets.Targets[0].TargetFramework;
                     firstProject = project;
                 }
 
                 libs[project.AssemblyName] = GetProjectLib(firstProject, project.AssemblyName, framework,
                     projectAssets.Targets[0].Libraries, versionRanges);
-            
+
                 specialVersions.UnionWith(projectAssets.ProjectFileDependencyGroups[0].Dependencies.Where(o => o.Contains("*")));
             }
 
@@ -108,9 +108,15 @@ namespace GenerateBindingRedirects
             try
             {
                 var projectAssets = new LockFileFormat().Read(projectAssetsJsonFilePath);
-                if (projectAssets.PackageFolders.Count > 1)
+                var mainPackageFolders = YieldMainPackageFolders(projectAssets).ToList();
+                if (mainPackageFolders.Count != 1)
                 {
-                    throw new ApplicationException($"Currently only a single package folder is supported. {projectAssetsJsonFilePath} lists {projectAssets.PackageFolders.Count}.");
+                    var pkgFolders = "";
+                    if (mainPackageFolders.Count > 1)
+                    {
+                        pkgFolders = " - " + string.Join(" , ", mainPackageFolders.Select(o => o.Path));
+                    }
+                    throw new ApplicationException($"Expected to find exactly one nuget package folder ending with \"\\.nuget\\packages\" . {projectAssetsJsonFilePath} lists {mainPackageFolders.Count}{pkgFolders}");
                 }
 
                 sc.NormalizeProjectAssets(project, projectAssets.Targets[0].Libraries);
@@ -146,5 +152,8 @@ namespace GenerateBindingRedirects
                 throw new ApplicationException("Failed to process " + projectAssetsJsonFilePath, exc);
             }
         }
+
+        private static IEnumerable<LockFileItem> YieldMainPackageFolders(LockFile projectAssets) =>
+            projectAssets.PackageFolders.Where(o => o.Path.EndsWith("\\.nuget\\packages\\") || o.Path.EndsWith("\\.nuget\\packages"));
     }
 }
