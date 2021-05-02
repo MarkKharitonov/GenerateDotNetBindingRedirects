@@ -2,7 +2,7 @@
   "profiles": {
     "AnalyzeProjectAssets": {
       "commandName": "Project",
-      "commandLineArgs": "--projectFile C:\\Dayforce\\tip\\DatePeriods.Test\\DatePeriods.Test.csproj --targetFiles obj\\BindingRedirectTargetFiles.txt --solutions C:\\Dayforce\\tip\\Build\\projects.yml --writeBindingRedirects --privateProbingPath _BindingRedirects\\DatePeriods.Test"
+      "commandLineArgs": "--projectFile C:\\Dayforce\\tip\\Services\\Platform\\CommonTests\\CommonTests.csproj --targetFiles obj\\BindingRedirectTargetFiles.txt --solutions C:\\Dayforce\\tip\\Build\\projects.yml --writeBindingRedirects --privateProbingPath _BindingRedirects\\CommonTests"
     }
   }
 }

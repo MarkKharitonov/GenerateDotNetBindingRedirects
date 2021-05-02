@@ -148,7 +148,7 @@ namespace GenerateBindingRedirects
             var sc = new SolutionsContext(solutionsListFile, projectFilePath);
             if (sc.ThisProjectContext == null)
             {
-                throw new ApplicationException($"The project {projectFilePath} cannot be processed.");
+                throw new ApplicationException($"The project {projectFilePath} cannot be processed, because no solution seems to contain it. Most likely a case of corrupt solution file.");
             }
 
             var projectAssets = new ProjectAssets(sc);

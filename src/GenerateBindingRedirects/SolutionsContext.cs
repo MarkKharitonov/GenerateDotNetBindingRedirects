@@ -36,11 +36,6 @@ namespace GenerateBindingRedirects
 
         public SolutionsContext(string solutionsListFile, string projectFilePath)
         {
-            var ignoreProjects = ConfigurationManager
-                .AppSettings["IgnoreProjects"]
-                ?.Split(',')
-                .ToHashSet(C.IgnoreCase);
-
             string upDirectory;
             ProjectContext.Count = 0;
 
@@ -63,7 +58,7 @@ namespace GenerateBindingRedirects
             m_projectsByName = m_solutions
                     .Select(path => (Solution: SolutionFile.Parse($"{solutionsListFile}{upDirectory}{path}"), SolutionPath: path))
                     .SelectMany(o => o.Solution.ProjectsInOrder.Select(p => (Solution: o.SolutionPath, Project: p)))
-                    .Where(o => o.Project.AbsolutePath.EndsWith(".csproj") && ignoreProjects?.Contains(o.Project.ProjectName) != true)
+                    .Where(o => o.Project.AbsolutePath.EndsWith(".csproj"))
                     .Select(o => ProjectContext.Create(this, o.Solution, Path.GetFullPath(o.Project.AbsolutePath)))
                     .Where(pc => pc != null)
                     .ToDictionary(pc => (pc.Solution, pc.ProjectName), C.IgnoreCase2);
@@ -207,7 +202,7 @@ namespace GenerateBindingRedirects
                     }
                 }
                 lib.Name = pc.AssemblyName;
-                var ext = lib.RuntimeAssemblies[0].Path.Substring(lib.RuntimeAssemblies[0].Path.Length - 4);
+                var ext = lib.RuntimeAssemblies[0].Path[^4..];
                 lib.RuntimeAssemblies[0] = new LockFileItem($"bin/placeholder/{pc.AssemblyName}{ext}");
             }
         }
