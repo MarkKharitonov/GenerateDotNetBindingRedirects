@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 using NuGet.Packaging.Core;
 using NuGet.Versioning;
 
-namespace GenerateBindingRedirects
+namespace Dayforce.CSharp.ProjectAssets
 {
     public class NuGetDependency : IEquatable<NuGetDependency>
     {
@@ -25,12 +25,12 @@ namespace GenerateBindingRedirects
 
             if (runtimeAssemblyItems.Count == 0)
             {
-                Log.WriteVerbose("CompleteConstruction({0}) : skip dependency {1} - no runtime assemblies", owner.Name, prototype);
+                Log.Instance.WriteVerbose("CompleteConstruction({0}) : skip dependency {1} - no runtime assemblies", owner.Name, prototype);
                 return null;
             }
 
             var res = new NuGetDependency(prototype, runtimeAssemblyItems);
-            Log.WriteVerbose("CompleteConstruction({0}) : take dependency {1}", owner.Name, res);
+            Log.Instance.WriteVerbose("CompleteConstruction({0}) : take dependency {1}", owner.Name, res);
             return res;
         }
 

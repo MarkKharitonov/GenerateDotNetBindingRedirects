@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
-namespace GenerateBindingRedirects
+namespace Dayforce.CSharp.ProjectAssets
 {
     public class StringPairOrdinalIgnoreCaseComparer : IEqualityComparer<(string, string)>
     {

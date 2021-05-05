@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 using NuGet.Frameworks;
 using NuGet.ProjectModel;
 
-namespace GenerateBindingRedirects
+namespace Dayforce.CSharp.ProjectAssets
 {
     public class ProjectItem : LibraryItem
     {

@@ -2,7 +2,7 @@
   "profiles": {
     "AnalyzeProjectAssets": {
       "commandName": "Project",
-      "commandLineArgs": "-f C:\\Dayforce\\60\\UI\\Api\\Api.csproj -s C:\\Dayforce\\60\\Build\\projects.yml -w -u c:\\temp"
+      "commandLineArgs": "-w -v:c:\\temp\\1 -f c:\\Dayforce\\DevOps\\GenerateDotNetBindingRedirects\\src\\GenerateBindingRedirectsTests\\Input\\3\\Api\\Api.csproj  -s c:\\Dayforce\\DevOps\\GenerateDotNetBindingRedirects\\src\\GenerateBindingRedirectsTests\\Input\\Solutions.txt"
     }
   }
 }

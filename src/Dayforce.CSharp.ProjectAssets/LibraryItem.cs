@@ -8,7 +8,7 @@ using NuGet.Packaging.Core;
 using NuGet.ProjectModel;
 using NuGet.Versioning;
 
-namespace GenerateBindingRedirects
+namespace Dayforce.CSharp.ProjectAssets
 {
     public abstract class LibraryItem
     {
@@ -66,7 +66,7 @@ namespace GenerateBindingRedirects
                 var specialVersion = specialVersions.FirstOrDefault(str => str.StartsWith(dep.Id, C.IGNORE_CASE) && str[dep.Id.Length] == ' ');
                 if (specialVersion == null)
                 {
-                    Log.WriteVerbose("CompleteConstruction({0}) : unresolved dependency {1} - not found", Name, dep);
+                    Log.Instance.WriteVerbose("CompleteConstruction({0}) : unresolved dependency {1} - not found", Name, dep);
                     return new NuGetDependency(dep, s_unresolvedRuntimeAssemblies);
                 }
 
@@ -85,7 +85,7 @@ namespace GenerateBindingRedirects
             var baseLibFolderPath = $"{packageDir}/lib";
             if (!Directory.Exists(baseLibFolderPath))
             {
-                Log.WriteVerbose("CompleteConstruction({0}) : skip dependency {1} - no runtime assemblies", Name, dep);
+                Log.Instance.WriteVerbose("CompleteConstruction({0}) : skip dependency {1} - no runtime assemblies", Name, dep);
                 return default;
             }
 
@@ -93,8 +93,12 @@ namespace GenerateBindingRedirects
                 .EnumerateDirectories(baseLibFolderPath)
                 .Select(libFolderPath => new FrameworkFromLibFolderPath(libFolderPath))
                 .ToList();
-            var path = packageFrameworks.Count > 0 ? packageFrameworks.GetNearest(framework).LibFolderPath : baseLibFolderPath;
-            Log.WriteVerbose("CompleteConstruction({0}) : take dependency {1} - {2}", Name, dep, path);
+            var path = packageFrameworks.Count > 0 ? packageFrameworks.GetNearest(framework)?.LibFolderPath : baseLibFolderPath;
+            if (path == null)
+            {
+
+            }
+            Log.Instance.WriteVerbose("CompleteConstruction({0}) : take dependency {1} - {2}", Name, dep, path);
             return NuGetDependency.Create(this, dep, packageFolder, path);
         }
     }

@@ -97,7 +97,6 @@ namespace GenerateBindingRedirectsTests
             {
                 Directory.Delete(outputDir, true);
             }
-            Log.Cleanup();
 
             bool modifiesProjectFile = (bool)TestContext.CurrentContext.Test.Arguments[4];
             if (modifiesProjectFile)

@@ -1,7 +1,7 @@
 ﻿using System;
 using NuGet.Versioning;
 
-namespace GenerateBindingRedirects
+namespace Dayforce.CSharp.ProjectAssets
 {
     public static class C
     {

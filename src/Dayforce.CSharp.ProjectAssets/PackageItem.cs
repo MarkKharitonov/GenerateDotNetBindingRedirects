@@ -7,7 +7,7 @@ using NuGet.Frameworks;
 using NuGet.ProjectModel;
 using NuGet.Versioning;
 
-namespace GenerateBindingRedirects
+namespace Dayforce.CSharp.ProjectAssets
 {
     public class PackageItem : LibraryItem, IEquatable<PackageItem>
     {
@@ -34,7 +34,7 @@ namespace GenerateBindingRedirects
                 {
                     if (o.Properties?.Count > 0)
                     {
-                        Log.WriteVerbose("CompleteConstruction({0}) : runtime assembly {1} has {2} properties.", Name, o.Path, o.Properties.Count);
+                        Log.Instance.WriteVerbose("CompleteConstruction({0}) : runtime assembly {1} has {2} properties.", Name, o.Path, o.Properties.Count);
                     }
                     var filePath = $"{baseDir}{o.Path}";
                     if (!File.Exists(filePath))
