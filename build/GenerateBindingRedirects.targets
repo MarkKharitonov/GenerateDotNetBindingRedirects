@@ -22,9 +22,9 @@
 
     <PropertyGroup Condition="'$(GenerateBindingRedirectsForTest)' != True">
       <BindingRedirectsPath>$(WorkspaceRoot)Build\2010\Deployer\Templates\AssemblyBindingRedirects\$(MSBuildProjectName).txt</BindingRedirectsPath>
-      <GenerateBindingRedirectsFlags>$(GenerateBindingRedirectsFlags) --bindingRedirects $(BindingRedirectsPath)</GenerateBindingRedirectsFlags>
       <BindingRedirectTargetFolder Condition="'$(WebProjectOutputDir)' != ''">$(WebProjectOutputDir)\bin\</BindingRedirectTargetFolder>
       <BindingRedirectTargetFolder Condition="'$(WebProjectOutputDir)' == ''">$(OutDir)</BindingRedirectTargetFolder>
+      <GenerateBindingRedirectsFlags>$(GenerateBindingRedirectsFlags) --bindingRedirects $(BindingRedirectsPath) --nuGetUsageReport $(BindingRedirectTargetFolder)NuGetUsageReport.json</GenerateBindingRedirectsFlags>
     </PropertyGroup>
 
     <Error Condition="'$(WorkspaceRoot)' == ''" Text="The WorkspaceRoot build variable must be defined." />
