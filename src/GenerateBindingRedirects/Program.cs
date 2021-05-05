@@ -6,6 +6,8 @@ using System.Linq;
 using System.Threading;
 using Mono.Cecil;
 using Mono.Options;
+using Newtonsoft.Json;
+using NuGet.Packaging;
 using NuGet.ProjectModel;
 using NuGet.Versioning;
 using Dependents = System.Collections.Generic.SortedDictionary<string,
@@ -45,6 +47,7 @@ namespace GenerateBindingRedirects
             var test = false;
             string privateProbingPath = null;
             string[] verboseTargets = null;
+            string nuGetUsageReport = null;
             var options = new OptionSet()
                 .Add("h|help|?", "Show help", _ => help = true)
                 .Add("v|verbose:", $"Produces verbose output. May be given a custom directory path where to collect extended information. Defaults to {logPath}", v => { logPath = v ?? logPath; verbose = true; })
@@ -60,6 +63,7 @@ namespace GenerateBindingRedirects
                 .Add("w|writeBindingRedirects", "Write the binding redirects to the respective config file. Mutually exclusive with --assert.", _ => writeBindingRedirects = true)
                 .Add("p|privateProbingPath=", @"Include the <probing privatePath=.../> element in the generated assembly binding redirects.", v => privateProbingPath = v.Replace('\\', '/'))
                 .Add("a|assert", "Asserts that the binding redirects are correct. Mutually exclusive with --writeBindingRedirects.", _ => assert = true)
+                .Add("u|nuGetUsageReport=", "Generate a report listing all the nuget packages on which the given project depends and save it under the given file path.", v => nuGetUsageReport = v)
                 .Add("<>", extraArgs.Add);
             ;
 
@@ -108,7 +112,7 @@ namespace GenerateBindingRedirects
             try
             {
                 Run(projectFilePath, solutionsListFile, outputTargetFiles, outputBindingRedirects, writeBindingRedirects,
-                    privateProbingPath, assert, test, verbose, logPath, verboseTargets);
+                    privateProbingPath, assert, test, verbose, logPath, verboseTargets, nuGetUsageReport);
             }
             catch (ApplicationException exc)
             {
@@ -138,7 +142,8 @@ namespace GenerateBindingRedirects
             bool test = false,
             bool verbose = false,
             string logPath = null,
-            string[] verboseTargets = null)
+            string[] verboseTargets = null,
+            string nuGetUsageReport = null)
         {
             if (verbose && (verboseTargets == null || verboseTargets.Contains(Path.GetFileNameWithoutExtension(projectFilePath), C.IgnoreCase)))
             {
@@ -166,6 +171,23 @@ namespace GenerateBindingRedirects
 
                 Log.WriteVerbose("{0} projects:", projects.Count());
                 projects.ForEach(p => Log.WriteVerbose("  {0}", p.Name));
+            }
+            if (nuGetUsageReport != null)
+            {
+                if (Directory.Exists(nuGetUsageReport) || nuGetUsageReport[^1] == '\\')
+                {
+                    nuGetUsageReport = nuGetUsageReport + (nuGetUsageReport[^1] == '\\' ? "" : "\\") + "NuGetUsageReport-" + sc.ThisProjectContext.ProjectName + ".json";
+                }
+                Directory.CreateDirectory(Path.GetDirectoryName(nuGetUsageReport));
+                File.WriteAllText(nuGetUsageReport, JsonConvert.SerializeObject(projectAssets
+                    .Libraries
+                    .Where(o => o.Value.Type == C.PACKAGE && o.Value.HasRuntimeAssemblies)
+                    .ToDictionary(o => o.Key, o => new
+                    {
+                        NuGetVersion = o.Value.Version.ToString(),
+                        Metadata = GetMetadata(projectAssets.PackageFolder, o.Key, o.Value),
+                        RuntimeAssemblies = o.Value.Library.RuntimeAssemblies.Select(o => Path.GetFileName(o.Path))
+                    }), Formatting.Indented));
             }
 
             var dependents = GetDependents(projectAssets);
@@ -232,6 +254,16 @@ namespace GenerateBindingRedirects
             }
         }
 
+        private static object GetMetadata(string packageFolder, string packageId, LibraryItem value)
+        {
+            var nuSpecFile = Path.Combine(packageFolder, packageId, value.Version.ToString(), packageId + ".nuspec");
+            var nuSpecReader = new NuspecReader(nuSpecFile);
+            return new {
+                Authors = nuSpecReader.GetAuthors(),
+                ProjectUrl = nuSpecReader.GetProjectUrl()
+            };
+        }
+
         private static void AssertBindingRedirectsInFile(string outputBindingRedirects, string expected)
         {
             if (!File.Exists(outputBindingRedirects))
@@ -259,14 +291,14 @@ namespace GenerateBindingRedirects
                 {
                     switch (debugMode)
                     {
-                    case DebugMode.Break:
-                        Debugger.Launch();
-                        break;
-                    case DebugMode.Loop:
-                        while (true)
-                        {
-                            Thread.Sleep(1000);
-                        }
+                        case DebugMode.Break:
+                            Debugger.Launch();
+                            break;
+                        case DebugMode.Loop:
+                            while (true)
+                            {
+                                Thread.Sleep(1000);
+                            }
                     }
                 }
                 extraArgs.Clear();

@@ -3,6 +3,14 @@
   "Id": "57b5c7dc-fadf-48b3-8999-8cf53b7393d2",
   "Items": [
     {
+      "Id": "2f3a6547-4414-40ac-99ff-58ee59aca00e",
+      "Command": "-f C:\\Dayforce\\60\\Services\\Platform\\AdminService\\AdminService.csproj -t obj\\BindingRedirectTargetFiles.txt -s C:\\Dayforce\\60\\Build\\projects.yml -w -r C:\\Dayforce\\60\\Build\\2010\\Deployer\\Templates\\AssemblyBindingRedirects\\AdminService.txt "
+    },
+    {
+      "Id": "ebdc9ab5-570b-4959-b4f2-faef08e1a9f1",
+      "Command": "-f C:\\Dayforce\\60\\UI\\Api\\Api.csproj -s C:\\Dayforce\\60\\Build\\projects.yml -w -u c:\\temp"
+    },
+    {
       "Id": "f8db089b-5300-45bf-a884-93bfd3bb7312",
       "Command": "--projectFile C:\\Dayforce\\tip\\Services\\Platform\\CommonTests\\CommonTests.csproj --targetFiles obj\\BindingRedirectTargetFiles.txt --solutions C:\\Dayforce\\tip\\Build\\projects.yml --writeBindingRedirects --privateProbingPath _BindingRedirects\\CommonTests"
     },
