@@ -20,6 +20,7 @@ namespace Dayforce.CSharp.ProjectAssets
         {
             ProjectContext firstProject = null;
             SortedDictionary<string, LibraryItem> libs = null;
+            Dictionary<(string, NuGetVersion), LibraryItem> discarded = null;
             var specialVersions = new HashSet<string>(C.IgnoreCase);
             foreach (var project in sc.YieldProjects())
             {
@@ -40,7 +41,7 @@ namespace Dayforce.CSharp.ProjectAssets
                     continue;
                 }
 
-                var (projectAssets, versionRanges) = ProcessProjectFile(sc, project, projectAssetsJsonFilePath, libs, ref PackageFolders);
+                var (projectAssets, versionRanges) = ProcessProjectFile(sc, project, projectAssetsJsonFilePath, libs, ref PackageFolders, ref discarded);
 
                 if (TargetFramework == null)
                 {
@@ -60,7 +61,7 @@ namespace Dayforce.CSharp.ProjectAssets
             }
 
             Libraries = libs;
-            Libraries.Values.ForEach(o => o.CompleteConstruction(PackageFolders, TargetFramework, sc, specialVersions, Libraries));
+            Libraries.Values.ForEach(o => o.CompleteConstruction(PackageFolders, TargetFramework, sc, specialVersions, Libraries, discarded));
         }
 
         private LibraryItem GetProjectLib(ProjectContext firstProject, string asmName,
@@ -82,7 +83,8 @@ namespace Dayforce.CSharp.ProjectAssets
             versionRanges.TryGetValue(lib.Name, out var versionRange) ? versionRange : new VersionRange(lib.Version);
 
         private static (LockFile projectAssets, IDictionary<string, VersionRange> versionRanges) ProcessProjectFile(SolutionsContext sc, ProjectContext project, string projectAssetsJsonFilePath,
-            IDictionary<string, LibraryItem> libs, ref List<string> packageFolders)
+            IDictionary<string, LibraryItem> libs, ref List<string> packageFolders,
+            ref Dictionary<(string, NuGetVersion), LibraryItem> discarded)
         {
             try
             {
@@ -118,7 +120,13 @@ namespace Dayforce.CSharp.ProjectAssets
                     else if (prev.Version < lib.Version)
                     {
                         Log.Instance.WriteVerbose("ProjectAssets({0}) : {1}/{2} (prev {3})", project, lib.Name, lib.Version, prev.Version);
+                        SaveDiscarded(ref discarded, prev);
                         libs[lib.Name] = LibraryItem.Create(lib, resolved[lib.Name], packageFolders);
+                    }
+                    else if (prev.Version > lib.Version)
+                    {
+                        Log.Instance.WriteVerbose("ProjectAssets({0}) : {1}/{2} (discard {3})", project, lib.Name, prev.Version, lib.Version);
+                        SaveDiscarded(ref discarded, LibraryItem.Create(lib, resolved[lib.Name], packageFolders));
                     }
                     else
                     {
@@ -132,6 +140,15 @@ namespace Dayforce.CSharp.ProjectAssets
             {
                 throw new ApplicationException("Failed to process " + projectAssetsJsonFilePath, exc);
             }
+        }
+
+        private static void SaveDiscarded(ref Dictionary<(string, NuGetVersion), LibraryItem> discarded, LibraryItem lib)
+        {
+            if (discarded == null)
+            {
+                discarded = new Dictionary<(string, NuGetVersion), LibraryItem>();
+            }
+            discarded[(lib.Name, lib.Version)] = lib;
         }
     }
 }

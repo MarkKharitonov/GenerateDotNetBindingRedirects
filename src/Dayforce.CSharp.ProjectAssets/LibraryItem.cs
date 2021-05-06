@@ -40,10 +40,13 @@ namespace Dayforce.CSharp.ProjectAssets
         }
 
         public abstract void CompleteConstruction(List<string> packageFolders, NuGetFramework framework, SolutionsContext sc,
-            HashSet<string> specialVersions, IReadOnlyDictionary<string, LibraryItem> all);
+            HashSet<string> specialVersions, IReadOnlyDictionary<string, LibraryItem> all,
+            Dictionary<(string, NuGetVersion), LibraryItem> discarded);
 
         protected void SetNuGetDependencies(List<string> packageFolders, NuGetFramework framework, HashSet<string> specialVersions,
-            IReadOnlyDictionary<string, LibraryItem> all, Func<PackageDependency, bool> predicate = null)
+            IReadOnlyDictionary<string, LibraryItem> all,
+            Dictionary<(string, NuGetVersion), LibraryItem> discarded,
+            Func<PackageDependency, bool> predicate = null)
         {
             IEnumerable<PackageDependency> deps = Library.Dependencies;
             if (predicate != null)
@@ -51,25 +54,17 @@ namespace Dayforce.CSharp.ProjectAssets
                 deps = deps.Where(predicate);
             }
             NuGetDependencies = deps
-                .Select(dep => CreateNuGetDependency(dep, packageFolders, framework, specialVersions, all))
+                .Select(dep => CreateNuGetDependency(dep, packageFolders, framework, specialVersions, all, discarded))
                 .Where(o => o != null)
                 .OrderBy(o => o.Id)
                 .ToList();
         }
 
         protected NuGetDependency CreateNuGetDependency(PackageDependency dep, List<string> packageFolders, NuGetFramework framework,
-            HashSet<string> specialVersions, IReadOnlyDictionary<string, LibraryItem> all)
+            HashSet<string> specialVersions, IReadOnlyDictionary<string, LibraryItem> all,
+            Dictionary<(string, NuGetVersion), LibraryItem> discarded)
         {
-            if (!all.TryGetValue(dep.Id, out var lib))
-            {
-                throw new ApplicationException($"Failed to map {dep} to one of the NuGet packages on which {Name} depends.");
-            }
-
-            var depVersion = dep.VersionRange.MinVersion;
-            if (depVersion == null)
-            {
-                depVersion = lib.Version;
-            }
+            var (lib, depVersion) = GetLibraryMatchingDependency(dep, all, discarded);
 
             var packageDir = packageFolders.Select(packageFolder => $"{packageFolder}{dep.Id}\\{depVersion}").FirstOrDefault(Directory.Exists);
             if (packageDir == null)
@@ -81,6 +76,7 @@ namespace Dayforce.CSharp.ProjectAssets
                     return new NuGetDependency(dep, s_unresolvedRuntimeAssemblies);
                 }
 
+                lib = all[dep.Id];
                 depVersion = lib.Version;
                 var packageDirs = packageFolders.Select(packageFolder => $"{packageFolder}{dep.Id}/{depVersion}").ToList();
                 packageDir = packageDirs.FirstOrDefault(Directory.Exists);
@@ -90,7 +86,7 @@ namespace Dayforce.CSharp.ProjectAssets
                 }
             }
 
-            if (depVersion == lib.Version)
+            if (lib != null)
             {
                 if (lib.HasRuntimeAssemblies)
                 {
@@ -120,12 +116,37 @@ namespace Dayforce.CSharp.ProjectAssets
                 var path = packageFrameworks.Count > 0 ? packageFrameworks.GetNearest(framework)?.LibFolderPath : baseLibFolderPath;
                 if (path == null)
                 {
-                    throw new ApplicationException($"{dep} cannot be a NuGet dependency of {Name}, because none of its target frameworks is compatible with {framework} (\"{string.Join("\" \"", packageFrameworks)}\").");
+                    Log.Instance.WriteVerbose("CompleteConstruction({0}) : skip dependency {1} - incompatible with \"{2}\" (\"{3}\")", Name, dep, 
+                        framework, string.Join("\" \"", packageFrameworks));
+                    return default;
                 }
-                Log.Instance.WriteVerbose("CompleteConstruction({0}) : take dependency {1} - {2}", Name, dep, path);
+                else
+                {
+                    Log.Instance.WriteVerbose("CompleteConstruction({0}) : take dependency {1} - {2}", Name, dep, path);
+                }
                 var packageFolder = packageFolders.First(packageDir.StartsWith);
                 return NuGetDependency.Create(this, dep, packageFolder, path);
             }
+        }
+
+        private (LibraryItem, NuGetVersion) GetLibraryMatchingDependency(PackageDependency dep, IReadOnlyDictionary<string, LibraryItem> all, Dictionary<(string, NuGetVersion), LibraryItem> discarded)
+        {
+            if (discarded != null && discarded.TryGetValue((dep.Id, dep.VersionRange.MinVersion), out var lib))
+            {
+                return (lib, lib.Version);
+            }
+
+            if (!all.TryGetValue(dep.Id, out lib))
+            {
+                throw new ApplicationException($"Failed to map {dep} to one of the NuGet packages on which {Name} depends.");
+            }
+
+            if (lib.Version == dep.VersionRange.MinVersion || dep.VersionRange.MinVersion == null)
+            {
+                return (lib, lib.Version);
+            }
+
+            return (null, dep.VersionRange.MinVersion);
         }
     }
 }

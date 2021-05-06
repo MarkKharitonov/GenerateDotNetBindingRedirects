@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using NuGet.Frameworks;
 using NuGet.ProjectModel;
+using NuGet.Versioning;
 
 namespace Dayforce.CSharp.ProjectAssets
 {
@@ -15,9 +16,10 @@ namespace Dayforce.CSharp.ProjectAssets
         }
 
         public override void CompleteConstruction(List<string> packageFolders, NuGetFramework framework, SolutionsContext sc,
-            HashSet<string> specialVersions, IReadOnlyDictionary<string, LibraryItem> all)
+            HashSet<string> specialVersions, IReadOnlyDictionary<string, LibraryItem> all,
+            Dictionary<(string, NuGetVersion), LibraryItem> discarded)
         {
-            SetNuGetDependencies(packageFolders, framework, specialVersions, all,
+            SetNuGetDependencies(packageFolders, framework, specialVersions, all, discarded,
                 dep => !(dep.VersionRange.Equals(C.V1.Range) && sc.ProjectsByAssemblyName.ContainsKey(dep.Id)));
         }
 

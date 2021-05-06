@@ -45,9 +45,10 @@ namespace Dayforce.CSharp.ProjectAssets
         }
 
         public override void CompleteConstruction(List<string> packageFolders, NuGetFramework framework, SolutionsContext sc,
-            HashSet<string> specialVersions, IReadOnlyDictionary<string, LibraryItem> all)
+            HashSet<string> specialVersions, IReadOnlyDictionary<string, LibraryItem> all,
+            Dictionary<(string, NuGetVersion), LibraryItem> discarded)
         {
-            SetNuGetDependencies(packageFolders, framework, specialVersions, all);
+            SetNuGetDependencies(packageFolders, framework, specialVersions, all, discarded);
         }
 
         public override string ToString() => $"{Name}/{VersionRange} (r = {RuntimeAssemblies.Count} , nd = {NuGetDependencies.Count})";
