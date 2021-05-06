@@ -15,7 +15,7 @@ namespace GenerateBindingRedirectsTests
         public static IEnumerable<TestCaseData> AllTestCases => (new (string, bool, bool)[]
         {
             ("1\\DataSvc", false, false),
-            ("1\\BJE", true, false), 
+            ("1\\BJE", true, false),
             ("1\\ReportingSvc", false, false),
             ("1\\CommonTests", false, true),
             ("1\\RuleEngineTests", false, false),
@@ -157,7 +157,6 @@ namespace GenerateBindingRedirectsTests
                 Directory.CreateDirectory(expectedDir);
                 File.Move(actualTargetFilesFilePath, $"{expectedDir}\\TargetFiles.txt", true);
                 File.Move(actualBindingRedirectsFilePath, $"{expectedDir}\\BindingRedirects.txt", true);
-                File.Move(Log.LogFilePath, $"{expectedDir}\\Verbose.log", true);
             }
             else
             {
@@ -172,6 +171,7 @@ namespace GenerateBindingRedirectsTests
                     Assert.AreEqual(expectedConfigFileTimestamp, File.GetLastWriteTimeUtc(configFile), $"The config file {configFile} was modified.");
                 }
             }
+            File.Move(Log.LogFilePath, $"{expectedDir}\\Verbose.log", true);
         }
 
         [TestCaseSource(nameof(AFewTestCases))]

@@ -66,10 +66,10 @@ namespace Dayforce.CSharp.ProjectAssets
                     // Same project is included in more than one solution. Take the one which solution is built earlier.
                     if (m_solutions.IndexOf(existing.Solution) < m_solutions.IndexOf(pc.Solution))
                     {
-                        Log.Instance.WriteVerbose(PREFIX + "Keeping {3} as primary.", pc.RelativeProjectFilePath, pc.Solution, existing.Solution, existing.Solution);
+                        Log.Instance.WriteVerbose(PREFIX + "Keeping {3} as primary.", pc.RelativeProjectFilePath, pc.RelativeSolutionFilePath, existing.RelativeSolutionFilePath, existing.RelativeSolutionFilePath);
                         continue;
                     }
-                    Log.Instance.WriteVerbose(PREFIX + "Replacing {3} with {4} as primary.", pc.RelativeProjectFilePath, pc.Solution, existing.Solution, existing.Solution, pc.Solution);
+                    Log.Instance.WriteVerbose(PREFIX + "Replacing {3} with {4} as primary.", pc.RelativeProjectFilePath, pc.RelativeSolutionFilePath, existing.RelativeSolutionFilePath, existing.RelativeSolutionFilePath, pc.RelativeSolutionFilePath);
                 }
                 projectsByAssemblyName[pc.AssemblyName] = pc;
             }

@@ -20,7 +20,7 @@ namespace GenerateBindingRedirects
 
         public static string LogFilePath { get; private set; }
 
-        public static bool Verbose => s_baseLog == NullLog.Default;
+        public static bool Verbose => s_baseLog != NullLog.Default;
 
         public static void WriteVerbose(object obj) => s_baseLog.WriteVerbose(obj);
         public static void WriteVerbose(string format, object arg) => s_baseLog.WriteVerbose(format, arg);

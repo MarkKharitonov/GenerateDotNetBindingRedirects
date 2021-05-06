@@ -40,17 +40,15 @@ namespace Dayforce.CSharp.ProjectAssets
                     continue;
                 }
 
-                var (projectAssets, versionRanges) = ProcessProjectFile(sc, project, projectAssetsJsonFilePath, libs);
+                var (projectAssets, versionRanges) = ProcessProjectFile(sc, project, projectAssetsJsonFilePath, libs, ref PackageFolder);
 
                 if (TargetFramework == null)
                 {
-                    PackageFolder = YieldMainPackageFolders(projectAssets).First().Path;
                     TargetFramework = projectAssets.Targets[0].TargetFramework;
                     firstProject = project;
                 }
 
-                libs[project.AssemblyName] = GetProjectLib(firstProject, project.AssemblyName, TargetFramework,
-                    projectAssets.Targets[0].Libraries, versionRanges);
+                libs[project.AssemblyName] = GetProjectLib(firstProject, project.AssemblyName, projectAssets.Targets[0].Libraries, versionRanges);
 
                 specialVersions.UnionWith(projectAssets.ProjectFileDependencyGroups[0].Dependencies.Where(o => o.Contains("*")));
             }
@@ -62,11 +60,10 @@ namespace Dayforce.CSharp.ProjectAssets
             }
 
             Libraries = libs;
-
             Libraries.Values.ForEach(o => o.CompleteConstruction(PackageFolder, TargetFramework, sc, specialVersions, Libraries));
         }
 
-        private static LibraryItem GetProjectLib(ProjectContext firstProject, string asmName, NuGetFramework framework,
+        private LibraryItem GetProjectLib(ProjectContext firstProject, string asmName,
             ICollection<LockFileTargetLibrary> projectDependencies, IDictionary<string, VersionRange> versionRanges)
         {
             Log.Instance.WriteVerbose("ProjectAssets({0}) : {1}/{2}", firstProject, asmName, C.V1.Value);
@@ -75,17 +72,17 @@ namespace Dayforce.CSharp.ProjectAssets
                 Name = asmName,
                 Version = C.V1.Value,
                 Type = C.PROJECT,
-                Framework = framework.DotNetFrameworkName,
+                Framework = TargetFramework.DotNetFrameworkName,
                 RuntimeAssemblies = new[] { new LockFileItem($"bin/placeholder/{asmName}.dll") },
                 Dependencies = projectDependencies.Select(lib => new PackageDependency(lib.Name, GetVersionRange(versionRanges, lib))).ToList()
-            }, C.V1.Range);
+            }, C.V1.Range, PackageFolder);
         }
 
         private static VersionRange GetVersionRange(IDictionary<string, VersionRange> versionRanges, LockFileTargetLibrary lib) =>
             versionRanges.TryGetValue(lib.Name, out var versionRange) ? versionRange : new VersionRange(lib.Version);
 
         private static (LockFile projectAssets, IDictionary<string, VersionRange> versionRanges) ProcessProjectFile(SolutionsContext sc, ProjectContext project, string projectAssetsJsonFilePath,
-            IDictionary<string, LibraryItem> libs)
+            IDictionary<string, LibraryItem> libs, ref string packageFolder)
         {
             try
             {
@@ -99,6 +96,10 @@ namespace Dayforce.CSharp.ProjectAssets
                         pkgFolders = " - " + string.Join(" , ", mainPackageFolders.Select(o => o.Path));
                     }
                     throw new ApplicationException($"Expected to find exactly one nuget package folder ending with \"\\.nuget\\packages\" . {projectAssetsJsonFilePath} lists {mainPackageFolders.Count}{pkgFolders}");
+                }
+                if (packageFolder == null)
+                {
+                    packageFolder = YieldMainPackageFolders(projectAssets).First().Path;
                 }
 
                 sc.NormalizeProjectAssets(project, projectAssets.Targets[0].Libraries);
@@ -114,12 +115,12 @@ namespace Dayforce.CSharp.ProjectAssets
                     if (!libs.TryGetValue(lib.Name, out var prev))
                     {
                         Log.Instance.WriteVerbose("ProjectAssets({0}) : {1}/{2}", project, lib.Name, lib.Version);
-                        libs[lib.Name] = LibraryItem.Create(lib, resolved[lib.Name]);
+                        libs[lib.Name] = LibraryItem.Create(lib, resolved[lib.Name], packageFolder);
                     }
                     else if (prev.Version < lib.Version)
                     {
                         Log.Instance.WriteVerbose("ProjectAssets({0}) : {1}/{2} (prev {3})", project, lib.Name, lib.Version, prev.Version);
-                        libs[lib.Name] = LibraryItem.Create(lib, resolved[lib.Name]);
+                        libs[lib.Name] = LibraryItem.Create(lib, resolved[lib.Name], packageFolder);
                     }
                     else
                     {

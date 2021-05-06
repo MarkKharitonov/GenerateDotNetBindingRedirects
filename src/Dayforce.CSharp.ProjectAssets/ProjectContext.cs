@@ -21,6 +21,7 @@ namespace Dayforce.CSharp.ProjectAssets
         public readonly string ActualConfigFilePath;
         public readonly string ProjectName;
         public readonly string RelativeProjectFilePath;
+        public readonly string RelativeSolutionFilePath;
         private readonly IReadOnlyList<string> m_referencedProjectNames;
         private readonly Lazy<IReadOnlyList<ProjectContext>> m_referencedProjects;
 
@@ -97,13 +98,14 @@ namespace Dayforce.CSharp.ProjectAssets
             ActualConfigFilePath = actualConfigFilePath;
             ProjectName = Path.GetFileNameWithoutExtension(projectFilePath);
             RelativeProjectFilePath = Log.Instance.GetRelativeFilePath(ProjectFilePath);
+            RelativeSolutionFilePath = Log.Instance.GetRelativeFilePath(Solution);
 
             Log.Instance.WriteVerbose("ProjectContext({0}) : {1}", RelativeProjectFilePath, AssemblyName);
 
             m_referencedProjects = new Lazy<IReadOnlyList<ProjectContext>>(() => m_referencedProjectNames.Select(projectName => m_sc.GetProjectByName(Solution, projectName)).ToList());
         }
 
-        public override string ToString() => $"{AssemblyName} ({ProjectName} @ {Solution})";
+        public override string ToString() => $"{AssemblyName} ({ProjectName} @ {RelativeSolutionFilePath})";
 
         private static (XPathNavigator, XmlNamespaceManager) GetProjectXPathNavigator(string projectFile)
         {

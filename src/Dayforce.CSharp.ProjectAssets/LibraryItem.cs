@@ -31,8 +31,8 @@ namespace Dayforce.CSharp.ProjectAssets
         [JsonIgnore]
         public abstract bool HasRuntimeAssemblies { get; }
 
-        public static LibraryItem Create(LockFileTargetLibrary library, VersionRange versionRange) =>
-            library.Type == C.PACKAGE ? new PackageItem(library, versionRange) : (LibraryItem)new ProjectItem(library);
+        public static LibraryItem Create(LockFileTargetLibrary library, VersionRange versionRange, string packageFolder) =>
+            library.Type == C.PACKAGE ? new PackageItem(library, versionRange, packageFolder) : (LibraryItem)new ProjectItem(library);
 
         protected LibraryItem(LockFileTargetLibrary library)
         {
@@ -60,7 +60,18 @@ namespace Dayforce.CSharp.ProjectAssets
         protected NuGetDependency CreateNuGetDependency(PackageDependency dep, string packageFolder, NuGetFramework framework,
             HashSet<string> specialVersions, IReadOnlyDictionary<string, LibraryItem> all)
         {
-            var packageDir = $"{packageFolder}{dep.Id}/{dep.VersionRange.MinVersion}";
+            if (!all.TryGetValue(dep.Id, out var lib))
+            {
+                throw new ApplicationException($"Failed to map {dep} to one of the NuGet packages on which {Name} depends.");
+            }
+
+            var depVersion = dep.VersionRange.MinVersion;
+            if (depVersion == null)
+            {
+                depVersion = lib.Version;
+            }
+
+            var packageDir = $"{packageFolder}{dep.Id}/{depVersion}";
             if (!Directory.Exists(packageDir))
             {
                 var specialVersion = specialVersions.FirstOrDefault(str => str.StartsWith(dep.Id, C.IGNORE_CASE) && str[dep.Id.Length] == ' ');
@@ -70,11 +81,6 @@ namespace Dayforce.CSharp.ProjectAssets
                     return new NuGetDependency(dep, s_unresolvedRuntimeAssemblies);
                 }
 
-                if (!all.TryGetValue(dep.Id, out var lib))
-                {
-                    throw new ApplicationException($"Failed to resolve {specialVersion}");
-                }
-
                 packageDir = $"{packageFolder}{dep.Id}/{lib.VersionRange.MinVersion}";
                 if (!Directory.Exists(packageDir))
                 {
@@ -82,24 +88,40 @@ namespace Dayforce.CSharp.ProjectAssets
                 }
             }
 
-            var baseLibFolderPath = $"{packageDir}/lib";
-            if (!Directory.Exists(baseLibFolderPath))
+            if (depVersion == lib.Version)
             {
-                Log.Instance.WriteVerbose("CompleteConstruction({0}) : skip dependency {1} - no runtime assemblies", Name, dep);
-                return default;
+                if (lib.HasRuntimeAssemblies)
+                {
+                    var path = Path.GetDirectoryName(((PackageItem)lib).RuntimeAssemblies[0].FilePath);
+                    Log.Instance.WriteVerbose("CompleteConstruction({0}) : take dependency {1} - {2}", Name, dep, path);
+                    return NuGetDependency.Create(this, dep, packageFolder, path);
+                }
+                else
+                {
+                    Log.Instance.WriteVerbose("CompleteConstruction({0}) : skip dependency {1} - no runtime assemblies", Name, dep);
+                    return default;
+                }
             }
-
-            var packageFrameworks = Directory
-                .EnumerateDirectories(baseLibFolderPath)
-                .Select(libFolderPath => new FrameworkFromLibFolderPath(libFolderPath))
-                .ToList();
-            var path = packageFrameworks.Count > 0 ? packageFrameworks.GetNearest(framework)?.LibFolderPath : baseLibFolderPath;
-            if (path == null)
             {
+                var baseLibFolderPath = $"{packageDir}/lib";
+                if (!Directory.Exists(baseLibFolderPath))
+                {
+                    Log.Instance.WriteVerbose("CompleteConstruction({0}) : skip dependency {1} - no runtime assemblies", Name, dep);
+                    return default;
+                }
 
+                var packageFrameworks = Directory
+                    .EnumerateDirectories(baseLibFolderPath)
+                    .Select(libFolderPath => new FrameworkFromLibFolderPath(libFolderPath))
+                    .ToList();
+                var path = packageFrameworks.Count > 0 ? packageFrameworks.GetNearest(framework)?.LibFolderPath : baseLibFolderPath;
+                if (path == null)
+                {
+                    throw new ApplicationException($"{dep} cannot be a NuGet dependency of {Name}, because none of its target frameworks is compatible with {framework} (\"{string.Join("\" \"", packageFrameworks)}\").");
+                }
+                Log.Instance.WriteVerbose("CompleteConstruction({0}) : take dependency {1} - {2}", Name, dep, path);
+                return NuGetDependency.Create(this, dep, packageFolder, path);
             }
-            Log.Instance.WriteVerbose("CompleteConstruction({0}) : take dependency {1} - {2}", Name, dep, path);
-            return NuGetDependency.Create(this, dep, packageFolder, path);
         }
     }
 }

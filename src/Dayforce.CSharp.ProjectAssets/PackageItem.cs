@@ -19,14 +19,10 @@ namespace Dayforce.CSharp.ProjectAssets
 
         public bool ShouldSerializeRuntimeAssemblies() => RuntimeAssemblies.Count > 0;
 
-        public PackageItem(LockFileTargetLibrary library, VersionRange versionRange) : base(library)
+        public PackageItem(LockFileTargetLibrary library, VersionRange versionRange, string packageFolder) : base(library)
         {
             VersionRange = versionRange;
-        }
 
-        public override void CompleteConstruction(string packageFolder, NuGetFramework framework, SolutionsContext sc,
-            HashSet<string> specialVersions, IReadOnlyDictionary<string, LibraryItem> all)
-        {
             var baseDir = $"{packageFolder}{Name}/{Version}/";
             RuntimeAssemblies = Library.RuntimeAssemblies
                 .Where(o => o.Path.IsExecutable())
@@ -34,7 +30,7 @@ namespace Dayforce.CSharp.ProjectAssets
                 {
                     if (o.Properties?.Count > 0)
                     {
-                        Log.Instance.WriteVerbose("CompleteConstruction({0}) : runtime assembly {1} has {2} properties.", Name, o.Path, o.Properties.Count);
+                        Log.Instance.WriteVerbose("PackageItem({0}) : runtime assembly {1} has {2} properties.", Name, o.Path, o.Properties.Count);
                     }
                     var filePath = $"{baseDir}{o.Path}";
                     if (!File.Exists(filePath))
@@ -45,7 +41,11 @@ namespace Dayforce.CSharp.ProjectAssets
                 })
                 .OrderBy(o => o.RelativeFilePath)
                 .ToList();
+        }
 
+        public override void CompleteConstruction(string packageFolder, NuGetFramework framework, SolutionsContext sc,
+            HashSet<string> specialVersions, IReadOnlyDictionary<string, LibraryItem> all)
+        {
             SetNuGetDependencies(packageFolder, framework, specialVersions, all);
         }
 
