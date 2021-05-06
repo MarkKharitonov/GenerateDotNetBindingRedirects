@@ -13,7 +13,7 @@ namespace Dayforce.CSharp.ProjectAssets
     public class ProjectAssets
     {
         public readonly IReadOnlyDictionary<string, LibraryItem> Libraries;
-        public readonly string PackageFolder;
+        public readonly List<string> PackageFolders;
         public readonly NuGetFramework TargetFramework;
 
         public ProjectAssets(SolutionsContext sc)
@@ -40,7 +40,7 @@ namespace Dayforce.CSharp.ProjectAssets
                     continue;
                 }
 
-                var (projectAssets, versionRanges) = ProcessProjectFile(sc, project, projectAssetsJsonFilePath, libs, ref PackageFolder);
+                var (projectAssets, versionRanges) = ProcessProjectFile(sc, project, projectAssetsJsonFilePath, libs, ref PackageFolders);
 
                 if (TargetFramework == null)
                 {
@@ -60,7 +60,7 @@ namespace Dayforce.CSharp.ProjectAssets
             }
 
             Libraries = libs;
-            Libraries.Values.ForEach(o => o.CompleteConstruction(PackageFolder, TargetFramework, sc, specialVersions, Libraries));
+            Libraries.Values.ForEach(o => o.CompleteConstruction(PackageFolders, TargetFramework, sc, specialVersions, Libraries));
         }
 
         private LibraryItem GetProjectLib(ProjectContext firstProject, string asmName,
@@ -75,33 +75,18 @@ namespace Dayforce.CSharp.ProjectAssets
                 Framework = TargetFramework.DotNetFrameworkName,
                 RuntimeAssemblies = new[] { new LockFileItem($"bin/placeholder/{asmName}.dll") },
                 Dependencies = projectDependencies.Select(lib => new PackageDependency(lib.Name, GetVersionRange(versionRanges, lib))).ToList()
-            }, C.V1.Range, PackageFolder);
+            }, C.V1.Range, PackageFolders);
         }
 
         private static VersionRange GetVersionRange(IDictionary<string, VersionRange> versionRanges, LockFileTargetLibrary lib) =>
             versionRanges.TryGetValue(lib.Name, out var versionRange) ? versionRange : new VersionRange(lib.Version);
 
         private static (LockFile projectAssets, IDictionary<string, VersionRange> versionRanges) ProcessProjectFile(SolutionsContext sc, ProjectContext project, string projectAssetsJsonFilePath,
-            IDictionary<string, LibraryItem> libs, ref string packageFolder)
+            IDictionary<string, LibraryItem> libs, ref List<string> packageFolders)
         {
             try
             {
                 var projectAssets = new LockFileFormat().Read(projectAssetsJsonFilePath);
-                var mainPackageFolders = YieldMainPackageFolders(projectAssets).ToList();
-                if (mainPackageFolders.Count != 1)
-                {
-                    var pkgFolders = "";
-                    if (mainPackageFolders.Count > 1)
-                    {
-                        pkgFolders = " - " + string.Join(" , ", mainPackageFolders.Select(o => o.Path));
-                    }
-                    throw new ApplicationException($"Expected to find exactly one nuget package folder ending with \"\\.nuget\\packages\" . {projectAssetsJsonFilePath} lists {mainPackageFolders.Count}{pkgFolders}");
-                }
-                if (packageFolder == null)
-                {
-                    packageFolder = YieldMainPackageFolders(projectAssets).First().Path;
-                }
-
                 sc.NormalizeProjectAssets(project, projectAssets.Targets[0].Libraries);
 
                 var resolved = projectAssets.Targets[0].Libraries
@@ -110,17 +95,30 @@ namespace Dayforce.CSharp.ProjectAssets
                     .GroupBy(o => o.Id, C.IgnoreCase)
                     .ToDictionary(g => g.Key, g => VersionRange.CommonSubSet(g.Select(o => o.VersionRange)), C.IgnoreCase);
 
+                if (packageFolders == null)
+                {
+                    packageFolders = projectAssets.PackageFolders.Select(o => o.Path + (o.Path[^1] == '\\' ? "" : "\\")).ToList();
+                    if (packageFolders.Count > 1)
+                    {
+                        Log.Instance.WriteVerbose("ProjectAssets({0}) : using {1} package folders", project, packageFolders.Count);
+                        for (int i = 0; i < packageFolders.Count; ++i)
+                        {
+                            Log.Instance.WriteVerbose("ProjectAssets({0}) :   package folder #{1} - {2}", project, i + 1, packageFolders[i]);
+                        }
+                    }
+                }
+
                 foreach (var lib in projectAssets.Targets[0].Libraries)
                 {
                     if (!libs.TryGetValue(lib.Name, out var prev))
                     {
                         Log.Instance.WriteVerbose("ProjectAssets({0}) : {1}/{2}", project, lib.Name, lib.Version);
-                        libs[lib.Name] = LibraryItem.Create(lib, resolved[lib.Name], packageFolder);
+                        libs[lib.Name] = LibraryItem.Create(lib, resolved[lib.Name], packageFolders);
                     }
                     else if (prev.Version < lib.Version)
                     {
                         Log.Instance.WriteVerbose("ProjectAssets({0}) : {1}/{2} (prev {3})", project, lib.Name, lib.Version, prev.Version);
-                        libs[lib.Name] = LibraryItem.Create(lib, resolved[lib.Name], packageFolder);
+                        libs[lib.Name] = LibraryItem.Create(lib, resolved[lib.Name], packageFolders);
                     }
                     else
                     {
@@ -135,8 +133,5 @@ namespace Dayforce.CSharp.ProjectAssets
                 throw new ApplicationException("Failed to process " + projectAssetsJsonFilePath, exc);
             }
         }
-
-        private static IEnumerable<LockFileItem> YieldMainPackageFolders(LockFile projectAssets) =>
-            projectAssets.PackageFolders.Where(o => o.Path.EndsWith("\\.nuget\\packages\\") || o.Path.EndsWith("\\.nuget\\packages"));
     }
 }

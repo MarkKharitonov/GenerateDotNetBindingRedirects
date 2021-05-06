@@ -31,18 +31,18 @@ namespace Dayforce.CSharp.ProjectAssets
         [JsonIgnore]
         public abstract bool HasRuntimeAssemblies { get; }
 
-        public static LibraryItem Create(LockFileTargetLibrary library, VersionRange versionRange, string packageFolder) =>
-            library.Type == C.PACKAGE ? new PackageItem(library, versionRange, packageFolder) : (LibraryItem)new ProjectItem(library);
+        public static LibraryItem Create(LockFileTargetLibrary library, VersionRange versionRange, List<string> packageFolders) =>
+            library.Type == C.PACKAGE ? new PackageItem(library, versionRange, packageFolders) : (LibraryItem)new ProjectItem(library);
 
         protected LibraryItem(LockFileTargetLibrary library)
         {
             Library = library;
         }
 
-        public abstract void CompleteConstruction(string packageFolder, NuGetFramework framework, SolutionsContext sc,
+        public abstract void CompleteConstruction(List<string> packageFolders, NuGetFramework framework, SolutionsContext sc,
             HashSet<string> specialVersions, IReadOnlyDictionary<string, LibraryItem> all);
 
-        protected void SetNuGetDependencies(string packageFolder, NuGetFramework framework, HashSet<string> specialVersions,
+        protected void SetNuGetDependencies(List<string> packageFolders, NuGetFramework framework, HashSet<string> specialVersions,
             IReadOnlyDictionary<string, LibraryItem> all, Func<PackageDependency, bool> predicate = null)
         {
             IEnumerable<PackageDependency> deps = Library.Dependencies;
@@ -51,13 +51,13 @@ namespace Dayforce.CSharp.ProjectAssets
                 deps = deps.Where(predicate);
             }
             NuGetDependencies = deps
-                .Select(dep => CreateNuGetDependency(dep, packageFolder, framework, specialVersions, all))
+                .Select(dep => CreateNuGetDependency(dep, packageFolders, framework, specialVersions, all))
                 .Where(o => o != null)
                 .OrderBy(o => o.Id)
                 .ToList();
         }
 
-        protected NuGetDependency CreateNuGetDependency(PackageDependency dep, string packageFolder, NuGetFramework framework,
+        protected NuGetDependency CreateNuGetDependency(PackageDependency dep, List<string> packageFolders, NuGetFramework framework,
             HashSet<string> specialVersions, IReadOnlyDictionary<string, LibraryItem> all)
         {
             if (!all.TryGetValue(dep.Id, out var lib))
@@ -71,8 +71,8 @@ namespace Dayforce.CSharp.ProjectAssets
                 depVersion = lib.Version;
             }
 
-            var packageDir = $"{packageFolder}{dep.Id}/{depVersion}";
-            if (!Directory.Exists(packageDir))
+            var packageDir = packageFolders.Select(packageFolder => $"{packageFolder}{dep.Id}\\{depVersion}").FirstOrDefault(Directory.Exists);
+            if (packageDir == null)
             {
                 var specialVersion = specialVersions.FirstOrDefault(str => str.StartsWith(dep.Id, C.IGNORE_CASE) && str[dep.Id.Length] == ' ');
                 if (specialVersion == null)
@@ -81,10 +81,12 @@ namespace Dayforce.CSharp.ProjectAssets
                     return new NuGetDependency(dep, s_unresolvedRuntimeAssemblies);
                 }
 
-                packageDir = $"{packageFolder}{dep.Id}/{lib.VersionRange.MinVersion}";
-                if (!Directory.Exists(packageDir))
+                depVersion = lib.Version;
+                var packageDirs = packageFolders.Select(packageFolder => $"{packageFolder}{dep.Id}/{depVersion}").ToList();
+                packageDir = packageDirs.FirstOrDefault(Directory.Exists);
+                if (packageDir == null)
                 {
-                    throw new ApplicationException($"Failed to resolve {specialVersion} - {packageDir} does not exist");
+                    throw new ApplicationException($"Failed to resolve {specialVersion} - none of \"{string.Join("\" \"", packageDirs)} exists");
                 }
             }
 
@@ -92,9 +94,10 @@ namespace Dayforce.CSharp.ProjectAssets
             {
                 if (lib.HasRuntimeAssemblies)
                 {
-                    var path = Path.GetDirectoryName(((PackageItem)lib).RuntimeAssemblies[0].FilePath);
+                    var runtimeAssemblies = ((PackageItem)lib).RuntimeAssemblies;
+                    var path = Path.GetDirectoryName(runtimeAssemblies[0].FilePath);
                     Log.Instance.WriteVerbose("CompleteConstruction({0}) : take dependency {1} - {2}", Name, dep, path);
-                    return NuGetDependency.Create(this, dep, packageFolder, path);
+                    return NuGetDependency.Create(this, dep, runtimeAssemblies);
                 }
                 else
                 {
@@ -103,7 +106,7 @@ namespace Dayforce.CSharp.ProjectAssets
                 }
             }
             {
-                var baseLibFolderPath = $"{packageDir}/lib";
+                var baseLibFolderPath = $"{packageDir}\\lib";
                 if (!Directory.Exists(baseLibFolderPath))
                 {
                     Log.Instance.WriteVerbose("CompleteConstruction({0}) : skip dependency {1} - no runtime assemblies", Name, dep);
@@ -120,6 +123,7 @@ namespace Dayforce.CSharp.ProjectAssets
                     throw new ApplicationException($"{dep} cannot be a NuGet dependency of {Name}, because none of its target frameworks is compatible with {framework} (\"{string.Join("\" \"", packageFrameworks)}\").");
                 }
                 Log.Instance.WriteVerbose("CompleteConstruction({0}) : take dependency {1} - {2}", Name, dep, path);
+                var packageFolder = packageFolders.First(packageDir.StartsWith);
                 return NuGetDependency.Create(this, dep, packageFolder, path);
             }
         }

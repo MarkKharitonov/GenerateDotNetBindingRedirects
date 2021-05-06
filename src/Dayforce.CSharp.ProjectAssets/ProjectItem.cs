@@ -14,10 +14,10 @@ namespace Dayforce.CSharp.ProjectAssets
         {
         }
 
-        public override void CompleteConstruction(string packageFolder, NuGetFramework framework, SolutionsContext sc,
+        public override void CompleteConstruction(List<string> packageFolders, NuGetFramework framework, SolutionsContext sc,
             HashSet<string> specialVersions, IReadOnlyDictionary<string, LibraryItem> all)
         {
-            SetNuGetDependencies(packageFolder, framework, specialVersions, all,
+            SetNuGetDependencies(packageFolders, framework, specialVersions, all,
                 dep => !(dep.VersionRange.Equals(C.V1.Range) && sc.ProjectsByAssemblyName.ContainsKey(dep.Id)));
         }
 

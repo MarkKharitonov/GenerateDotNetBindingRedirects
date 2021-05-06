@@ -156,7 +156,7 @@ namespace GenerateBindingRedirects
 
             var projectAssets = new ProjectAssets(sc);
 
-            if (projectAssets.PackageFolder == null)
+            if (projectAssets.PackageFolders == null)
             {
                 throw new ApplicationException($"No project.assets.json is associated with {projectFilePath} and {solutionsListFile}.");
             }
@@ -195,7 +195,7 @@ namespace GenerateBindingRedirects
                     targetFiles = assemblyBindingRedirects.Select(a =>
                         a.IsFrameworkAssembly ?
                         a.TargetFilePath :
-                        Path.GetRelativePath(projectAssets.PackageFolder, a.TargetFilePath)).OrderBy(o => o);
+                        Path.GetRelativePath(projectAssets.PackageFolders.First(a.TargetFilePath.StartsWith), a.TargetFilePath)).OrderBy(o => o);
                 }
                 else
                 {

@@ -44,14 +44,16 @@ namespace Dayforce.CSharp.ProjectAssets
                 .ToDictionary(o => o.Key, o => new
                 {
                     NuGetVersion = o.Value.Version.ToString(),
-                    Metadata = GetMetadata(projectAssets.PackageFolder, o.Key, o.Value),
+                    Metadata = GetMetadata(projectAssets.PackageFolders, o.Key, o.Value),
                     RuntimeAssemblies = o.Value.Library.RuntimeAssemblies.Select(o => Path.GetFileName(o.Path))
                 }), Formatting.Indented));
         }
 
-        private static object GetMetadata(string packageFolder, string packageId, LibraryItem value)
+        private static object GetMetadata(List<string> packageFolders, string packageId, LibraryItem value)
         {
-            var nuSpecFile = Path.Combine(packageFolder, packageId, value.Version.ToString(), packageId + ".nuspec");
+            var nuSpecFile = packageFolders
+                .Select(packageFolder => Path.Combine(packageFolder, packageId, value.Version.ToString(), packageId + ".nuspec"))
+                .First(File.Exists);
             var nuSpecReader = new NuspecReader(nuSpecFile);
             return new
             {
