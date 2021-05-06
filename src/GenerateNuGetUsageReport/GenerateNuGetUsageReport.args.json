@@ -1,0 +1,10 @@
+{
+  "FileVersion": 2,
+  "Id": "4c5dc56f-8791-4dde-ac46-74cbcca04135",
+  "Items": [
+    {
+      "Id": "b7d4926d-38b5-4999-96f0-39f6fbe16933",
+      "Command": "-s C:\\dayforce\\fintech\\build-solutions.yml -f C:\\dayforce\\fintech\\src/Gateway/Gateway/Gateway.csproj -u c:\\temp -v:c:\\temp\\1"
+    }
+  ]
+}

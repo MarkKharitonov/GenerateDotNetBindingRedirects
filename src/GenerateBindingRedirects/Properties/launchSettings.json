@@ -1,8 +1,7 @@
 {
   "profiles": {
     "AnalyzeProjectAssets": {
-      "commandName": "Project",
-      "commandLineArgs": "-f C:\\Dayforce\\60\\Services\\Platform\\AdminService\\AdminService.csproj -t obj\\BindingRedirectTargetFiles.txt -s C:\\Dayforce\\60\\Build\\projects.yml -w -r C:\\Dayforce\\60\\Build\\2010\\Deployer\\Templates\\AssemblyBindingRedirects\\AdminService.txt "
+      "commandName": "Project"
     }
   }
 }

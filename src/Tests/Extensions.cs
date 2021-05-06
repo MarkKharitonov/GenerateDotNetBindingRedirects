@@ -1,33 +1,27 @@
-﻿using System;
+﻿using NUnit.Framework;
 using System.Diagnostics;
 using System.IO;
-using System.Reflection;
-using NUnit.Framework;
 using System.Linq;
 
-namespace GenerateBindingRedirectsTests
+namespace Tests
 {
-    [SetUpFixture]
-    public class GlobalContext
+    public static class Extensions
     {
-        public static string RootDir = Path.GetFullPath($"{Assembly.GetExecutingAssembly().Location}\\..\\..\\..\\..");
-
-        [OneTimeSetUp]
-        public static void SetUp()
+        public static string GetTempDirectoryName()
         {
-            var msBuildExe = GetMSBuildExe();
-            Assert.IsNotNull(msBuildExe, "Failed to find msbuild.exe");
-            Array.ForEach(File.ReadAllLines($"{RootDir}\\Input\\Solutions.txt"), slnFileName => RestoreNuGetPackages(msBuildExe, slnFileName));
+            var name = Path.GetTempFileName();
+            File.Delete(name);
+            return name + "\\";
         }
 
-        private static string GetMSBuildExe()
+        public static string GetMSBuildExe()
         {
             var drives = new[] { 'C', 'D', 'E', 'F' };
             var products = new[] { "BuildTools", "Enterprise", "Professional", "Community" };
             var toolVersions = new[] { "Current", "15.0" };
             var years = new[] { 2019, 2017 };
-            return 
-                drives.SelectMany(drive => 
+            return
+                drives.SelectMany(drive =>
                     years.SelectMany(year =>
                         products.SelectMany(product =>
                             toolVersions.Select(toolVersion =>
@@ -35,12 +29,7 @@ namespace GenerateBindingRedirectsTests
                 .FirstOrDefault(File.Exists);
         }
 
-        private static void RestoreNuGetPackages(string msBuildExe, string slnFileName)
-        {
-            RunProcess(msBuildExe, $"/t:Restore /v:m /m {RootDir}\\Input\\{slnFileName}");
-        }
-
-        private static void RunProcess(string exe, string arguments)
+        public static int RunProcess(this string exe, string arguments)
         {
             var p = new Process
             {
@@ -51,12 +40,21 @@ namespace GenerateBindingRedirectsTests
                     CreateNoWindow = true,
                     LoadUserProfile = false,
                     UseShellExecute = false,
-                    WindowStyle = ProcessWindowStyle.Hidden,
+                    WindowStyle = ProcessWindowStyle.Hidden
                 },
             };
             p.Start();
             p.WaitForExit();
-            Assert.AreEqual(0, p.ExitCode);
+            return p.ExitCode;
+        }
+
+        public static void RestoreNuGetPackages(this string msBuildExe, string slnFilePath)
+        {
+            var file = Path.GetTempFileName();
+            var exitCode = msBuildExe.RunProcess($"/t:Restore /v:m /m /nologo /noConsoleLogger {slnFilePath} /fl /flp:LogFile={file};Verbosity=minimal");
+            TestContext.Progress.WriteLine(File.ReadAllText(file));
+            File.Delete(file);
+            Assert.AreEqual(0, exitCode);
         }
     }
 }

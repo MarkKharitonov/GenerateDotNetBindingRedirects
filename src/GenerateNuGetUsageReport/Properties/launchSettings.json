@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "GenerateNuGetUsageReport": {
+      "commandName": "Project",
+      "commandLineArgs": "-s C:\\dayforce\\fintech\\build-solutions.yml -f C:\\dayforce\\fintech\\src/Gateway/Gateway/Gateway.csproj -u c:\\temp -v:c:\\temp\\1"
+    }
+  }
+}

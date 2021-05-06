@@ -5,10 +5,10 @@ using System.Linq;
 using GenerateBindingRedirects;
 using NUnit.Framework;
 
-namespace GenerateBindingRedirectsTests
+namespace Tests
 {
     [TestFixture]
-    public class Tests
+    public class BindingRedirectsTests
     {
         private static readonly bool s_updateExpectedResults = false;
 
@@ -45,14 +45,9 @@ namespace GenerateBindingRedirectsTests
 
         private static TestCaseData CreateTestCase((string Path, bool NewAppConfig, bool ModifiesProjectFile) a)
         {
-            var outputDir = Path.GetTempFileName();
-            File.Delete(outputDir);
-            Directory.CreateDirectory(outputDir);
-
             return new TestCaseData(
                 $"{GlobalContext.RootDir}\\Input\\{a.Path}\\{Path.GetFileName(a.Path)}.csproj",
                 $"{GlobalContext.RootDir}\\Expected\\{a.Path}",
-                outputDir,
                 a.NewAppConfig,
                 a.ModifiesProjectFile)
             {
@@ -74,10 +69,17 @@ namespace GenerateBindingRedirectsTests
             return configFile;
         }
 
+        [OneTimeSetUp]
+        public static void OneTimeSetUp()
+        {
+            Array.ForEach(File.ReadAllLines($"{GlobalContext.RootDir}\\Input\\Solutions.txt"),
+                slnFileName => GlobalContext.MSBuildExe.RestoreNuGetPackages(GlobalContext.RootDir + "\\Input\\" + slnFileName));
+        }
+
         [SetUp]
         public void Setup()
         {
-            bool modifiesProjectFile = (bool)TestContext.CurrentContext.Test.Arguments[4];
+            bool modifiesProjectFile = (bool)TestContext.CurrentContext.Test.Arguments[3];
             if (modifiesProjectFile)
             {
                 var projectFile = (string)TestContext.CurrentContext.Test.Arguments[0];
@@ -87,18 +89,16 @@ namespace GenerateBindingRedirectsTests
                     File.Copy(projectFile, projectFileBackup);
                 }
             }
+
+            Directory.CreateDirectory(GlobalContext.OutputDir);
         }
 
         [TearDown]
         public void TearDown()
         {
-            var outputDir = (string)TestContext.CurrentContext.Test.Arguments[2];
-            if (Directory.Exists(outputDir))
-            {
-                Directory.Delete(outputDir, true);
-            }
+            GlobalContext.CleanOutputDir();
 
-            bool modifiesProjectFile = (bool)TestContext.CurrentContext.Test.Arguments[4];
+            bool modifiesProjectFile = (bool)TestContext.CurrentContext.Test.Arguments[3];
             if (modifiesProjectFile)
             {
                 var projectFile = (string)TestContext.CurrentContext.Test.Arguments[0];
@@ -109,7 +109,7 @@ namespace GenerateBindingRedirectsTests
                 }
             }
 
-            bool newAppConfig = (bool)TestContext.CurrentContext.Test.Arguments[3];
+            bool newAppConfig = (bool)TestContext.CurrentContext.Test.Arguments[2];
             if (newAppConfig)
             {
                 var projectFile = (string)TestContext.CurrentContext.Test.Arguments[0];
@@ -119,12 +119,12 @@ namespace GenerateBindingRedirectsTests
         }
 
         [TestCaseSource(nameof(AllTestCases))]
-        public void Generate(string projectFilePath, string expectedDir, string outputDir, bool newAppConfig, bool _2)
+        public void Generate(string projectFilePath, string expectedDir, bool newAppConfig, bool _2)
         {
-            var actualTargetFilesFilePath = $"{outputDir}\\TargetFiles.txt";
+            var actualTargetFilesFilePath = $"{GlobalContext.OutputDir}\\TargetFiles.txt";
             FileAssert.DoesNotExist(actualTargetFilesFilePath);
 
-            var actualBindingRedirectsFilePath = $"{outputDir}\\BindingRedirects.txt";
+            var actualBindingRedirectsFilePath = $"{GlobalContext.OutputDir}\\BindingRedirects.txt";
             FileAssert.DoesNotExist(actualBindingRedirectsFilePath);
             string configFile = GetConfigFile(projectFilePath, newAppConfig);
             var expectedConfigFileTimestamp = s_updateExpectedResults || newAppConfig ? default : File.GetLastWriteTimeUtc(configFile);
@@ -141,7 +141,7 @@ namespace GenerateBindingRedirectsTests
                 "--solutions",
                 $"{GlobalContext.RootDir}\\Input\\Solutions.txt",
                 "--writeBindingRedirects",
-                $"-v:{outputDir}"
+                $"-v:{GlobalContext.OutputDir}"
             };
 
             if (projectFilePath.EndsWith("Tests.csproj"))
@@ -175,7 +175,7 @@ namespace GenerateBindingRedirectsTests
         }
 
         [TestCaseSource(nameof(AFewTestCases))]
-        public void GenerateCreateNewConfigFile(string projectFilePath, string _, string outputDir, bool _1, bool _2)
+        public void GenerateCreateNewConfigFile(string projectFilePath, string _, bool _1, bool _2)
         {
             if (s_updateExpectedResults)
             {
@@ -183,7 +183,7 @@ namespace GenerateBindingRedirectsTests
                 return;
             }
 
-            var expectedConfigFile = $"{outputDir}\\Config.xml";
+            var expectedConfigFile = $"{GlobalContext.OutputDir}\\Config.xml";
             var actualConfigFile = GetConfigFile(projectFilePath);
             File.Move(actualConfigFile, expectedConfigFile);
             FileAssert.DoesNotExist(actualConfigFile);
@@ -204,24 +204,24 @@ namespace GenerateBindingRedirectsTests
         }
 
         [TestCaseSource(nameof(AFewTestCases))]
-        public void GenerateOverwriteMismatchingConfigFileNoRuntimeElement(string projectFilePath, string _, string outputDir, bool _1, bool _2)
+        public void GenerateOverwriteMismatchingConfigFileNoRuntimeElement(string projectFilePath, string _, bool _1, bool _2)
         {
-            GenerateOverwriteMismatchingConfigFile(projectFilePath, outputDir, "runtime");
+            GenerateOverwriteMismatchingConfigFile(projectFilePath, "runtime");
         }
 
         [TestCaseSource(nameof(AFewTestCases))]
-        public void GenerateOverwriteMismatchingConfigFileNoAssemblyBindingElement(string projectFilePath, string _, string outputDir, bool _1, bool _2)
+        public void GenerateOverwriteMismatchingConfigFileNoAssemblyBindingElement(string projectFilePath, string _, bool _1, bool _2)
         {
-            GenerateOverwriteMismatchingConfigFile(projectFilePath, outputDir, "assemblyBinding");
+            GenerateOverwriteMismatchingConfigFile(projectFilePath, "assemblyBinding");
         }
 
         [TestCaseSource(nameof(AFewTestCases))]
-        public void GenerateOverwriteMismatchingConfigFileNoDependentAssemblyElement(string projectFilePath, string _, string outputDir, bool _1, bool _2)
+        public void GenerateOverwriteMismatchingConfigFileNoDependentAssemblyElement(string projectFilePath, string _, bool _1, bool _2)
         {
-            GenerateOverwriteMismatchingConfigFile(projectFilePath, outputDir, "dependentAssembly");
+            GenerateOverwriteMismatchingConfigFile(projectFilePath, "dependentAssembly");
         }
 
-        private static void GenerateOverwriteMismatchingConfigFile(string projectFilePath, string outputDir, string elementName)
+        private static void GenerateOverwriteMismatchingConfigFile(string projectFilePath, string elementName)
         {
             if (s_updateExpectedResults)
             {
@@ -232,7 +232,7 @@ namespace GenerateBindingRedirectsTests
             var openTag = "<" + elementName;
             var closeTag = "</" + elementName + ">";
 
-            var expectedConfigFile = $"{outputDir}\\Config.xml";
+            var expectedConfigFile = $"{GlobalContext.OutputDir}\\Config.xml";
             var actualConfigFile = GetConfigFile(projectFilePath);
             File.Move(actualConfigFile, expectedConfigFile);
             var skip = false;
@@ -264,7 +264,7 @@ namespace GenerateBindingRedirectsTests
         }
 
         [TestCaseSource(nameof(AFewTestCases))]
-        public void AssertPass(string projectFilePath, string expectedDir, string outputDir, bool _1, bool _2)
+        public void AssertPass(string projectFilePath, string expectedDir, bool _1, bool _2)
         {
             if (s_updateExpectedResults)
             {
@@ -272,7 +272,7 @@ namespace GenerateBindingRedirectsTests
                 return;
             }
 
-            var actualTargetFilesFilePath = $"{outputDir}\\TargetFiles.txt";
+            var actualTargetFilesFilePath = $"{GlobalContext.OutputDir}\\TargetFiles.txt";
             var bindingRedirectsFilePath = $"{expectedDir}\\BindingRedirects.txt";
             var expectedBindingRedirectsFileTimestamp = File.GetLastWriteTimeUtc(bindingRedirectsFilePath);
             var configFile = GetConfigFile(projectFilePath);
@@ -291,7 +291,7 @@ namespace GenerateBindingRedirectsTests
         }
 
         [TestCaseSource(nameof(ATestCase))]
-        public void AssertFailNoBindingRedirectsTxtFile(string projectFilePath, string _, string outputDir, bool _1, bool _2)
+        public void AssertFailNoBindingRedirectsTxtFile(string projectFilePath, string _, bool _1, bool _2)
         {
             if (s_updateExpectedResults)
             {
@@ -299,7 +299,7 @@ namespace GenerateBindingRedirectsTests
                 return;
             }
 
-            var nonExistingBindingRedirectsFilePath = $"{outputDir}\\BindingRedirects.txt";
+            var nonExistingBindingRedirectsFilePath = $"{GlobalContext.OutputDir}\\BindingRedirects.txt";
             FileAssert.DoesNotExist(nonExistingBindingRedirectsFilePath);
 
             var exc = Assert.Throws<ApplicationException>(() => Program.Run(
@@ -313,7 +313,7 @@ namespace GenerateBindingRedirectsTests
         }
 
         [TestCaseSource(nameof(ATestCase))]
-        public void AssertFailMismatchingBindingRedirectsInTxtFile(string projectFilePath, string expectedDir, string outputDir, bool _1, bool _2)
+        public void AssertFailMismatchingBindingRedirectsInTxtFile(string projectFilePath, string expectedDir, bool _1, bool _2)
         {
             if (s_updateExpectedResults)
             {
@@ -321,7 +321,7 @@ namespace GenerateBindingRedirectsTests
                 return;
             }
 
-            var mismatchingBindingRedirectsFilePath = $"{outputDir}\\BindingRedirects.txt";
+            var mismatchingBindingRedirectsFilePath = $"{GlobalContext.OutputDir}\\BindingRedirects.txt";
             string expectedBindingRedirectsFilePath = $"{expectedDir}\\BindingRedirects.txt";
             File.WriteAllLines(mismatchingBindingRedirectsFilePath, File.ReadAllLines(expectedBindingRedirectsFilePath).Skip(4));
             FileAssert.AreNotEqual(expectedBindingRedirectsFilePath, mismatchingBindingRedirectsFilePath);
@@ -337,7 +337,7 @@ namespace GenerateBindingRedirectsTests
         }
 
         [TestCaseSource(nameof(NewConfigFileTestCase))]
-        public void AssertFailNoConfigFile(string projectFilePath, string _, string _1, bool _2, bool _3)
+        public void AssertFailNoConfigFile(string projectFilePath, string _, bool _1, bool _2)
         {
             if (s_updateExpectedResults)
             {
@@ -359,7 +359,7 @@ namespace GenerateBindingRedirectsTests
         }
 
         [TestCaseSource(nameof(NewConfigFileTestCase))]
-        public void AssertFailMismatchingBindingRedirectsInConfigFile(string projectFilePath, string _, string _1, bool _2, bool _3)
+        public void AssertFailMismatchingBindingRedirectsInConfigFile(string projectFilePath, string _, bool _1, bool _2)
         {
             if (s_updateExpectedResults)
             {

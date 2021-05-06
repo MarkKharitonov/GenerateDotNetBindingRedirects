@@ -5,7 +5,6 @@ trigger:
 - hotfix/*
 
 variables:
-  projectDir: src\GenerateBindingRedirects
   binDir: bin\Release\netcoreapp3.1
 
 name: 1.0.$(Date:yy)$(DayOfYear)$(Rev:.r)
@@ -38,9 +37,17 @@ jobs:
 
   - template: ci/nuget-pack-as-tool.yml@templates
     parameters:
-      projectDir: $(projectDir)
+      id: GenerateBindingRedirects
+      projectDir: src\GenerateBindingRedirects
       binDir: $(binDir)
-      buildDir: build
+      buildDir: src\GenerateBindingRedirects\build
+
+  - template: ci/nuget-pack-as-tool.yml@templates
+    parameters:
+      id: GenerateNuGetUsageReport
+      projectDir: src\GenerateNuGetUsageReport
+      binDir: $(binDir)
+      buildDir: src\GenerateNuGetUsageReport\build
 
   - template: ci/nuget-push.yml@templates
 
