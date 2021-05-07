@@ -1,7 +1,6 @@
 ﻿using System;
+using Dayforce.CSharp.ProjectAssets;
 using Newtonsoft.Json;
-using NuGet.Packaging.Core;
-using NuGet.ProjectModel;
 using NuGet.Versioning;
 
 namespace GenerateBindingRedirects

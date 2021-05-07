@@ -7,7 +7,7 @@ using NuGet.Frameworks;
 using NuGet.ProjectModel;
 using NuGet.Versioning;
 
-namespace GenerateBindingRedirects
+namespace Dayforce.CSharp.ProjectAssets
 {
     public class PackageItem : LibraryItem, IEquatable<PackageItem>
     {
@@ -19,34 +19,36 @@ namespace GenerateBindingRedirects
 
         public bool ShouldSerializeRuntimeAssemblies() => RuntimeAssemblies.Count > 0;
 
-        public PackageItem(LockFileTargetLibrary library, VersionRange versionRange) : base(library)
+        public PackageItem(LockFileTargetLibrary library, VersionRange versionRange, List<string> packageFolders) : base(library)
         {
             VersionRange = versionRange;
-        }
 
-        public override void CompleteConstruction(string packageFolder, NuGetFramework framework, SolutionsContext sc,
-            HashSet<string> specialVersions, IReadOnlyDictionary<string, LibraryItem> all)
-        {
-            var baseDir = $"{packageFolder}{Name}/{Version}/";
+            var baseDirs = packageFolders.Select(packageFolder => $"{packageFolder}{Name}\\{Version}\\").ToList();
             RuntimeAssemblies = Library.RuntimeAssemblies
                 .Where(o => o.Path.IsExecutable())
                 .Select(o =>
                 {
                     if (o.Properties?.Count > 0)
                     {
-                        Log.WriteVerbose("CompleteConstruction({0}) : runtime assembly {1} has {2} properties.", Name, o.Path, o.Properties.Count);
+                        Log.Instance.WriteVerbose("PackageItem({0}) : runtime assembly {1} has {2} properties.", Name, o.Path, o.Properties.Count);
                     }
-                    var filePath = $"{baseDir}{o.Path}";
-                    if (!File.Exists(filePath))
+                    var filePath = baseDirs.Select(baseDir => baseDir + o.Path).FirstOrDefault(File.Exists);
+                    if (filePath == null)
                     {
-                        throw new ApplicationException($"Not found: {filePath}");
+                        throw new ApplicationException($"{o.Path} not found under any of \"{string.Join("\" \"", baseDirs)}\"");
                     }
+                    var packageFolder = packageFolders.First(filePath.StartsWith);
                     return new RuntimeAssembly(packageFolder, filePath);
                 })
                 .OrderBy(o => o.RelativeFilePath)
                 .ToList();
+        }
 
-            SetNuGetDependencies(packageFolder, framework, specialVersions, all);
+        public override void CompleteConstruction(List<string> packageFolders, NuGetFramework framework, SolutionsContext sc,
+            HashSet<string> specialVersions, IReadOnlyDictionary<string, LibraryItem> all,
+            Dictionary<(string, NuGetVersion), LibraryItem> discarded)
+        {
+            SetNuGetDependencies(packageFolders, framework, specialVersions, all, discarded);
         }
 
         public override string ToString() => $"{Name}/{VersionRange} (r = {RuntimeAssemblies.Count} , nd = {NuGetDependencies.Count})";

@@ -1,161 +1,46 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using Dayforce.CSharp.ProjectAssets;
+using System;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using Dependents = System.Collections.Generic.SortedDictionary<string,
     System.Collections.Generic.Dictionary<System.Version,
-        System.Collections.Generic.Dictionary<GenerateBindingRedirects.RuntimeAssembly,
-            System.Collections.Generic.Dictionary<GenerateBindingRedirects.NuGetDependency,
-                System.Collections.Generic.List<GenerateBindingRedirects.LibraryItem>>>>>;
+        System.Collections.Generic.Dictionary<Dayforce.CSharp.ProjectAssets.RuntimeAssembly,
+            System.Collections.Generic.Dictionary<Dayforce.CSharp.ProjectAssets.NuGetDependency,
+                System.Collections.Generic.List<Dayforce.CSharp.ProjectAssets.LibraryItem>>>>>;
 using DependentsByVersion = System.Collections.Generic.Dictionary<System.Version,
-        System.Collections.Generic.Dictionary<GenerateBindingRedirects.RuntimeAssembly,
-            System.Collections.Generic.Dictionary<GenerateBindingRedirects.NuGetDependency,
-                System.Collections.Generic.List<GenerateBindingRedirects.LibraryItem>>>>;
+        System.Collections.Generic.Dictionary<Dayforce.CSharp.ProjectAssets.RuntimeAssembly,
+            System.Collections.Generic.Dictionary<Dayforce.CSharp.ProjectAssets.NuGetDependency,
+                System.Collections.Generic.List<Dayforce.CSharp.ProjectAssets.LibraryItem>>>>;
 
 namespace GenerateBindingRedirects
 {
-    public static class Log
+    public class Log
     {
-        private static string s_baseDir;
-        private static TextWriter s_logWriter;
-        private static string s_logPath;
-        private static bool s_zip;
+        private static ILog s_baseLog = NullLog.Default;
 
         public static string LogFilePath { get; private set; }
 
-        internal static void Save(string projectAssetsJsonFilePath)
-        {
-            if (Verbose)
-            {
-                var dstFilePath = s_logPath + "\\" + GetRelativeFilePath(projectAssetsJsonFilePath).Replace("\\", "__").Replace("__obj__project.assets.json", ".assets.json");
-                File.Copy(projectAssetsJsonFilePath, dstFilePath, true);
-            }
-        }
+        public static bool Verbose => s_baseLog != NullLog.Default;
 
-        internal static readonly string DefaultLogDirectory = GetDefaultLogDirectory();
-
-        private static string GetDefaultLogDirectory()
-        {
-            var logDir = Environment.GetEnvironmentVariable("Build_StagingDirectory");
-            if (string.IsNullOrEmpty(logDir))
-            {
-                logDir = Environment.GetEnvironmentVariable("System_ArtifactsDirectory");
-                if (string.IsNullOrEmpty(logDir))
-                {
-                    logDir = $"{Path.GetTempPath()}\\a{Process.GetCurrentProcess().Id}_{DateTime.Now:yyyyMMddHHmmss}";
-                    // May already exist if called twice from different scripts when ran locally
-                    Directory.CreateDirectory(logDir);
-                    return logDir;
-                }
-            }
-            logDir += "\\drop";
-            Directory.CreateDirectory(logDir);
-            return logDir;
-        }
-
-        public static bool Verbose { get; private set; }
-
-        public static void WriteVerbose(object obj)
-        {
-            if (Verbose)
-            {
-                s_logWriter.WriteLine(obj);
-            }
-        }
-
-        public static void WriteVerbose(string format, object arg)
-        {
-            if (Verbose)
-            {
-                s_logWriter.WriteLine(format, arg);
-            }
-        }
-        public static void WriteVerbose(string format, object arg, object arg2)
-        {
-            if (Verbose)
-            {
-                s_logWriter.WriteLine(format, arg, arg2);
-            }
-        }
-
-        public static void WriteVerbose(string format, object arg, object arg2, object arg3)
-        {
-            if (Verbose)
-            {
-                s_logWriter.WriteLine(format, arg, arg2, arg3);
-            }
-        }
-        public static void WriteVerbose(string format, params object[] args)
-        {
-            if (Verbose)
-            {
-                s_logWriter.WriteLine(format, args);
-            }
-        }
-
-        public static string GetRelativeFilePath(string filePath)
-        {
-            if (!Verbose)
-            {
-                return null;
-            }
-
-            if (s_baseDir == null)
-            {
-                return filePath;
-            }
-
-            return Path.GetRelativePath(s_baseDir, filePath);
-        }
+        public static void WriteVerbose(object obj) => s_baseLog.WriteVerbose(obj);
+        public static void WriteVerbose(string format, object arg) => s_baseLog.WriteVerbose(format, arg);
+        public static void WriteVerbose(string format, object arg, object arg2) => s_baseLog.WriteVerbose(format, arg, arg2);
+        public static void WriteVerbose(string format, object arg, object arg2, object arg3) => s_baseLog.WriteVerbose(format, arg, arg2, arg3);
+        public static void WriteVerbose(string format, params object[] args) => s_baseLog.WriteVerbose(format, args);
 
         internal static void Setup(string logPath, string solutionsListFile, string projectFilePath, bool zip)
         {
-            if (File.Exists(logPath))
-            {
-                throw new ApplicationException($"{logPath} must not exist or be a directory.");
-            }
-
-            Verbose = true;
-            s_baseDir = solutionsListFile + "\\..";
-            var relativeFilePath = GetRelativeFilePath(projectFilePath);
-            if (logPath == null)
-            {
-                logPath = DefaultLogDirectory;
-            }
-            var delim = logPath.EndsWith('\\') ? "" : "\\";
-            string buildDefName = Environment.GetEnvironmentVariable("Build_DefinitionName");
-            string buildNumber = Environment.GetEnvironmentVariable("Build_BuildNumber");
-            var delim2 = string.IsNullOrEmpty(buildDefName) ? "" : ".";
-            var delim3 = string.IsNullOrEmpty(buildNumber) ? "" : ".";
-            s_logPath = $"{logPath}{delim}GenerateBindingRedirects{delim2}{buildDefName}{delim3}{buildNumber}";
-            Directory.CreateDirectory(s_logPath);
-            s_logPath += "\\" + relativeFilePath.Replace("\\", "__").Replace(".csproj", "");
-            Directory.CreateDirectory(s_logPath);
-            LogFilePath = s_logPath + "\\verbose.log";
-            s_logWriter = new StreamWriter(LogFilePath);
-            Console.WriteLine("Verbose log folder: " + s_logPath);
-            s_zip = zip;
+            var baseDir = Path.GetFullPath(solutionsListFile + (solutionsListFile.EndsWith("Solutions.txt") ? "\\.." : "\\..\\.."));
+            var verboseLog = new VerboseLog("GenerateBindingRedirects", logPath, baseDir, projectFilePath, zip);
+            LogFilePath = verboseLog.LogFilePath;
+            s_baseLog = verboseLog;
+            Dayforce.CSharp.ProjectAssets.Log.Instance = s_baseLog;
         }
 
-        internal static string ToString(IEnumerable<object> items) => Verbose ? string.Join(" , ", items) : null;
-
-        public static void Cleanup()
+        internal static void Cleanup()
         {
-            if (s_logWriter != null)
-            {
-                s_logWriter.Close();
-                s_logWriter = null;
-                if (s_zip)
-                {
-                    var zipFile = s_logPath + ".zip";
-                    File.Delete(zipFile);
-                    ZipFile.CreateFromDirectory(s_logPath, zipFile);
-                    Directory.Delete(s_logPath, true);
-                }
-            }
-            Verbose = false;
+            using (s_baseLog as IDisposable) { }
+            Dayforce.CSharp.ProjectAssets.Log.Instance = s_baseLog = NullLog.Default;
         }
 
         public static void CuriousCases(Dependents dependents)

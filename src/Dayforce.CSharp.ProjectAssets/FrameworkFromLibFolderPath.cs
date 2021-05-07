@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using NuGet.Frameworks;
 
-namespace GenerateBindingRedirects
+namespace Dayforce.CSharp.ProjectAssets
 {
     public class FrameworkFromLibFolderPath : IFrameworkSpecific
     {
@@ -14,5 +14,7 @@ namespace GenerateBindingRedirects
         public readonly string LibFolderPath;
 
         public NuGetFramework TargetFramework { get; }
+
+        public override string ToString() => TargetFramework.ToString();
     }
 }

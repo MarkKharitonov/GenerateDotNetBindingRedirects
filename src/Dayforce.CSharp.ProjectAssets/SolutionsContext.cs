@@ -7,12 +7,12 @@ using Microsoft.Build.Construction;
 using NuGet.Packaging.Core;
 using NuGet.ProjectModel;
 
-namespace GenerateBindingRedirects
+namespace Dayforce.CSharp.ProjectAssets
 {
     public class SolutionsContext
     {
         public readonly IReadOnlyDictionary<string, ProjectContext> ProjectsByAssemblyName;
-        private readonly string[] m_solutions;
+        private readonly IList<string> m_solutions;
         private readonly IReadOnlyDictionary<(string, string), ProjectContext> m_projectsByName;
         public readonly ProjectContext ThisProjectContext;
 
@@ -34,34 +34,18 @@ namespace GenerateBindingRedirects
             throw new ApplicationException($"The project {projectName} could not be found in any of the solutions {string.Join(" , ", m_solutions)}");
         }
 
-        public SolutionsContext(string solutionsListFile, string projectFilePath)
+        public SolutionsContext(string solutionsListFile, string projectFilePath, ISolutionsListFileReader slnListFileReader)
         {
-            string upDirectory;
             ProjectContext.Count = 0;
 
-            m_solutions = File.ReadAllLines(solutionsListFile);
-            if (solutionsListFile.Contains("Solutions.txt"))
-            {
-                upDirectory = "\\..\\";
-            }
-            else
-            {
-                m_solutions = m_solutions
-                    .Where(line => line.StartsWith("      - name: "))
-                    .Select(name => name.Replace("      - name: ", ""))
-                    .Select(name => name + ".sln")
-                    .ToArray();
-
-                upDirectory = "\\..\\..\\";
-            }
-
+            m_solutions = slnListFileReader.YieldSolutionFilePaths(solutionsListFile).ToList();
             m_projectsByName = m_solutions
-                    .Select(path => (Solution: SolutionFile.Parse($"{solutionsListFile}{upDirectory}{path}"), SolutionPath: path))
-                    .SelectMany(o => o.Solution.ProjectsInOrder.Select(p => (Solution: o.SolutionPath, Project: p)))
-                    .Where(o => o.Project.AbsolutePath.EndsWith(".csproj"))
-                    .Select(o => ProjectContext.Create(this, o.Solution, Path.GetFullPath(o.Project.AbsolutePath)))
-                    .Where(pc => pc != null)
-                    .ToDictionary(pc => (pc.Solution, pc.ProjectName), C.IgnoreCase2);
+                .Select(path => (Solution: SolutionFile.Parse(path), SolutionPath: path))
+                .SelectMany(o => o.Solution.ProjectsInOrder.Select(p => (Solution: o.SolutionPath, Project: p)))
+                .Where(o => o.Project.AbsolutePath.EndsWith(".csproj"))
+                .Select(o => ProjectContext.Create(this, o.Solution, Path.GetFullPath(o.Project.AbsolutePath)))
+                .Where(pc => pc != null)
+                .ToDictionary(pc => (pc.Solution, pc.ProjectName), C.IgnoreCase2);
 
             var projectsByAssemblyName = new Dictionary<string, ProjectContext>(C.IgnoreCase);
             foreach (var pc in m_projectsByName.Values)
@@ -75,12 +59,12 @@ namespace GenerateBindingRedirects
 
                     const string PREFIX = "Project {0} is included in more than one solution - {1} and {2}. ";
                     // Same project is included in more than one solution. Take the one which solution is built earlier.
-                    if (Array.IndexOf(m_solutions, existing.Solution) < Array.IndexOf(m_solutions, pc.Solution))
+                    if (m_solutions.IndexOf(existing.Solution) < m_solutions.IndexOf(pc.Solution))
                     {
-                        Log.WriteVerbose(PREFIX + "Keeping {3} as primary.", pc.RelativeProjectFilePath, pc.Solution, existing.Solution, existing.Solution);
+                        Log.Instance.WriteVerbose(PREFIX + "Keeping {3} as primary.", pc.RelativeProjectFilePath, pc.RelativeSolutionFilePath, existing.RelativeSolutionFilePath, existing.RelativeSolutionFilePath);
                         continue;
                     }
-                    Log.WriteVerbose(PREFIX + "Replacing {3} with {4} as primary.", pc.RelativeProjectFilePath, pc.Solution, existing.Solution, existing.Solution, pc.Solution);
+                    Log.Instance.WriteVerbose(PREFIX + "Replacing {3} with {4} as primary.", pc.RelativeProjectFilePath, pc.RelativeSolutionFilePath, existing.RelativeSolutionFilePath, existing.RelativeSolutionFilePath, pc.RelativeSolutionFilePath);
                 }
                 projectsByAssemblyName[pc.AssemblyName] = pc;
             }
@@ -190,14 +174,14 @@ namespace GenerateBindingRedirects
                     throw new ApplicationException($"Project entry for {lib.Name} has {lib.RuntimeAssemblies.Count} runtime assemblies - {string.Join(" , ", lib.RuntimeAssemblies.Select(o => o.Path))}");
                 }
 
-                Log.WriteVerbose("NormalizeAssets({0}) : replace {1} with {2}", project, lib.Name, pc.AssemblyName);
+                Log.Instance.WriteVerbose("NormalizeAssets({0}) : replace {1} with {2}", project, lib.Name, pc.AssemblyName);
 
                 foreach (var dependent in libs.Where(o => o.Type == C.PROJECT))
                 {
                     var i = dependent.Dependencies.FindIndex(0, o => o.VersionRange.Equals(C.V1.Range) && o.Id.Equals(lib.Name, C.IGNORE_CASE));
                     if (i > -1)
                     {
-                        Log.WriteVerbose("NormalizeAssets({0}) : DependencyOf({1}) : replace {2} with {3}", project, dependent.Name, lib.Name, pc.AssemblyName);
+                        Log.Instance.WriteVerbose("NormalizeAssets({0}) : DependencyOf({1}) : replace {2} with {3}", project, dependent.Name, lib.Name, pc.AssemblyName);
                         dependent.Dependencies[i] = new PackageDependency(pc.AssemblyName, C.V1.Range);
                     }
                 }

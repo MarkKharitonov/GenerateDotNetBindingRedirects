@@ -4,21 +4,22 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Xml.Linq;
+using Dayforce.CSharp.ProjectAssets;
 using Mono.Cecil;
 using Mono.Options;
-using Newtonsoft.Json;
-using NuGet.Packaging;
+using NuGet.Frameworks;
 using NuGet.ProjectModel;
 using NuGet.Versioning;
 using Dependents = System.Collections.Generic.SortedDictionary<string,
     System.Collections.Generic.Dictionary<System.Version,
-        System.Collections.Generic.Dictionary<GenerateBindingRedirects.RuntimeAssembly,
-            System.Collections.Generic.Dictionary<GenerateBindingRedirects.NuGetDependency,
-                System.Collections.Generic.List<GenerateBindingRedirects.LibraryItem>>>>>;
+        System.Collections.Generic.Dictionary<Dayforce.CSharp.ProjectAssets.RuntimeAssembly,
+            System.Collections.Generic.Dictionary<Dayforce.CSharp.ProjectAssets.NuGetDependency,
+                System.Collections.Generic.List<Dayforce.CSharp.ProjectAssets.LibraryItem>>>>>;
 using DependentsByVersion = System.Collections.Generic.Dictionary<System.Version,
-        System.Collections.Generic.Dictionary<GenerateBindingRedirects.RuntimeAssembly,
-            System.Collections.Generic.Dictionary<GenerateBindingRedirects.NuGetDependency,
-                System.Collections.Generic.List<GenerateBindingRedirects.LibraryItem>>>>;
+        System.Collections.Generic.Dictionary<Dayforce.CSharp.ProjectAssets.RuntimeAssembly,
+            System.Collections.Generic.Dictionary<Dayforce.CSharp.ProjectAssets.NuGetDependency,
+                System.Collections.Generic.List<Dayforce.CSharp.ProjectAssets.LibraryItem>>>>;
 
 namespace GenerateBindingRedirects
 {
@@ -42,7 +43,7 @@ namespace GenerateBindingRedirects
             var help = false;
             var debugMode = DebugMode.None;
             var verbose = false;
-            string logPath = Log.DefaultLogDirectory;
+            string logPath = VerboseLog.DefaultLogDirectory;
             List<string> extraArgs = new List<string>();
             var test = false;
             string privateProbingPath = null;
@@ -56,8 +57,8 @@ namespace GenerateBindingRedirects
                 " - generate relative file paths in the --targetFiles output, so that it could be compared across the machine boundaries\r\n" +
                 " - do not zip the verbose payload, so that tests could examine it easily", _ => test = true)
                 .Add("debugMode=", $"Debug mode. One of {string.Join(" , ", Enum.GetNames(typeof(DebugMode)))} . Defaults to {debugMode} .", (DebugMode v) => debugMode = v)
-                .Add("f=|projectFile=", "[Required] The project file.", v => projectFilePath = v)
-                .Add("s=|solutions=", "[Required] A file listing all the relevant solutions.", v => solutionsListFile = v)
+                .Add("f|projectFile=", "[Required] The project file.", v => projectFilePath = v)
+                .Add("s|solutions=", "[Required] A file listing all the relevant solutions.", v => solutionsListFile = v)
                 .Add("t|targetFiles=", "Output the target file paths to the given file. Use - to output to console.", v => outputTargetFiles = v)
                 .Add("r|bindingRedirects=", "Output the binding redirects to the given file. Use - to output to console.", v => outputBindingRedirects = v)
                 .Add("w|writeBindingRedirects", "Write the binding redirects to the respective config file. Mutually exclusive with --assert.", _ => writeBindingRedirects = true)
@@ -111,8 +112,13 @@ namespace GenerateBindingRedirects
 
             try
             {
+                if (verbose && (verboseTargets == null || verboseTargets.Contains(Path.GetFileNameWithoutExtension(projectFilePath), C.IgnoreCase)))
+                {
+                    Log.Setup(logPath, solutionsListFile, projectFilePath, !test);
+                }
+
                 Run(projectFilePath, solutionsListFile, outputTargetFiles, outputBindingRedirects, writeBindingRedirects,
-                    privateProbingPath, assert, test, verbose, logPath, verboseTargets, nuGetUsageReport);
+                    privateProbingPath, assert, test, nuGetUsageReport);
             }
             catch (ApplicationException exc)
             {
@@ -140,17 +146,9 @@ namespace GenerateBindingRedirects
             string privateProbingPath = null,
             bool assert = false,
             bool test = false,
-            bool verbose = false,
-            string logPath = null,
-            string[] verboseTargets = null,
             string nuGetUsageReport = null)
         {
-            if (verbose && (verboseTargets == null || verboseTargets.Contains(Path.GetFileNameWithoutExtension(projectFilePath), C.IgnoreCase)))
-            {
-                Log.Setup(logPath, solutionsListFile, projectFilePath, !test);
-            }
-
-            var sc = new SolutionsContext(solutionsListFile, projectFilePath);
+            var sc = new SolutionsContext(solutionsListFile, projectFilePath, new DayforceSolutionsListFileReader());
             if (sc.ThisProjectContext == null)
             {
                 throw new ApplicationException($"The project {projectFilePath} cannot be processed, because no solution seems to contain it. Most likely a case of corrupt solution file.");
@@ -158,7 +156,7 @@ namespace GenerateBindingRedirects
 
             var projectAssets = new ProjectAssets(sc);
 
-            if (projectAssets.PackageFolder == null)
+            if (projectAssets.PackageFolders == null)
             {
                 throw new ApplicationException($"No project.assets.json is associated with {projectFilePath} and {solutionsListFile}.");
             }
@@ -174,29 +172,18 @@ namespace GenerateBindingRedirects
             }
             if (nuGetUsageReport != null)
             {
-                if (Directory.Exists(nuGetUsageReport) || nuGetUsageReport[^1] == '\\')
-                {
-                    nuGetUsageReport = nuGetUsageReport + (nuGetUsageReport[^1] == '\\' ? "" : "\\") + "NuGetUsageReport-" + sc.ThisProjectContext.ProjectName + ".json";
-                }
-                Directory.CreateDirectory(Path.GetDirectoryName(nuGetUsageReport));
-                File.WriteAllText(nuGetUsageReport, JsonConvert.SerializeObject(projectAssets
-                    .Libraries
-                    .Where(o => o.Value.Type == C.PACKAGE && o.Value.HasRuntimeAssemblies)
-                    .ToDictionary(o => o.Key, o => new
-                    {
-                        NuGetVersion = o.Value.Version.ToString(),
-                        Metadata = GetMetadata(projectAssets.PackageFolder, o.Key, o.Value),
-                        RuntimeAssemblies = o.Value.Library.RuntimeAssemblies.Select(o => Path.GetFileName(o.Path))
-                    }), Formatting.Indented));
+                projectAssets.GenerateNuGetUsageReport(sc.ThisProjectContext.ProjectName, nuGetUsageReport);
             }
 
             var dependents = GetDependents(projectAssets);
             Log.CuriousCases(dependents);
-            AddAssemblyReferencesForUnresolvedOrMismatchingNuGetDependencies(dependents, projectAssets.FrameworkRedistList);
+
+            var frameworkRedistList = GetFrameworkRedistList(projectAssets.TargetFramework);
+            AddAssemblyReferencesForUnresolvedOrMismatchingNuGetDependencies(dependents, frameworkRedistList);
 
             var assemblyBindingRedirects = dependents
                 .Where(kvp => kvp.Value.Count > 1)
-                .Select(kvp => GetAssemblyBindingRedirect(kvp.Key, kvp.Value, projectAssets.FrameworkRedistList))
+                .Select(kvp => GetAssemblyBindingRedirect(kvp.Key, kvp.Value, frameworkRedistList))
                 .Where(o => o != null)
                 .ToList();
 
@@ -208,7 +195,7 @@ namespace GenerateBindingRedirects
                     targetFiles = assemblyBindingRedirects.Select(a =>
                         a.IsFrameworkAssembly ?
                         a.TargetFilePath :
-                        Path.GetRelativePath(projectAssets.PackageFolder, a.TargetFilePath)).OrderBy(o => o);
+                        Path.GetRelativePath(projectAssets.PackageFolders.First(a.TargetFilePath.StartsWith), a.TargetFilePath)).OrderBy(o => o);
                 }
                 else
                 {
@@ -249,20 +236,28 @@ namespace GenerateBindingRedirects
 
                 if (writeBindingRedirects || assert)
                 {
-                    sc.ThisProjectContext.WriteBindingRedirects(res, assert);
+                    var writer = new BindingRedirectsWriter(sc.ThisProjectContext);
+                    writer.WriteBindingRedirects(res, assert);
                 }
             }
         }
 
-        private static object GetMetadata(string packageFolder, string packageId, LibraryItem value)
+        private static IReadOnlyDictionary<(string, Version), AssemblyBindingRedirect> GetFrameworkRedistList(NuGetFramework framework)
         {
-            var nuSpecFile = Path.Combine(packageFolder, packageId, value.Version.ToString(), packageId + ".nuspec");
-            var nuSpecReader = new NuspecReader(nuSpecFile);
-            return new {
-                Authors = nuSpecReader.GetAuthors(),
-                ProjectUrl = nuSpecReader.GetProjectUrl()
-            };
+            var version = framework.DotNetFrameworkName.Replace($"{framework.Framework},Version=", "");
+            string path = @$"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\{framework.Framework}\{version}\RedistList\FrameworkList.xml";
+            return XDocument
+                .Load(path)
+                .Element("FileList")
+                .Elements("File")
+                .Select(e => new AssemblyBindingRedirect(
+                    e.Attribute("AssemblyName").Value,
+                    Version.Parse(e.Attribute("Version").Value),
+                    e.Attribute("Culture").Value,
+                    e.Attribute("PublicKeyToken").Value))
+                .ToDictionary(a => (a.AssemblyName, a.Version));
         }
+
 
         private static void AssertBindingRedirectsInFile(string outputBindingRedirects, string expected)
         {
@@ -463,28 +458,6 @@ namespace GenerateBindingRedirects
         }
 
         private static NuGetVersion GetMaxNuGetVersion(Dictionary<NuGetDependency, List<LibraryItem>> value) => value.Keys.Select(o => o.VersionRange.MinVersion).Max();
-
-        public static void ForEach<T>(this IEnumerable<T> items, Action<T> action)
-        {
-            foreach (var item in items)
-            {
-                action(item);
-            }
-        }
-
-        public static int FindIndex<T>(this IList<T> source, int startIndex, Predicate<T> match)
-        {
-            for (int i = startIndex; i < source.Count; ++i)
-            {
-                if (match(source[i]))
-                {
-                    return i;
-                }
-            }
-            return -1;
-        }
-
-        public static bool IsExecutable(this string path) => path.EndsWith(".dll", C.IGNORE_CASE) || path.EndsWith(".exe", C.IGNORE_CASE);
 
         public static bool HasExecutable(this IList<LockFileItem> files) => files.Any(o => o.Path.IsExecutable());
 

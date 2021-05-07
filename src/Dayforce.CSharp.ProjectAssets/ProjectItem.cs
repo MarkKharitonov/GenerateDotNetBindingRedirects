@@ -2,14 +2,12 @@
 using Newtonsoft.Json;
 using NuGet.Frameworks;
 using NuGet.ProjectModel;
+using NuGet.Versioning;
 
-namespace GenerateBindingRedirects
+namespace Dayforce.CSharp.ProjectAssets
 {
     public class ProjectItem : LibraryItem
     {
-        [JsonIgnore]
-        public SolutionsContext m_solutionsContext { get; private set; }
-
         [JsonIgnore]
         public override bool HasRuntimeAssemblies => true;
 
@@ -17,11 +15,11 @@ namespace GenerateBindingRedirects
         {
         }
 
-        public override void CompleteConstruction(string packageFolder, NuGetFramework framework, SolutionsContext sc,
-            HashSet<string> specialVersions, IReadOnlyDictionary<string, LibraryItem> all)
+        public override void CompleteConstruction(List<string> packageFolders, NuGetFramework framework, SolutionsContext sc,
+            HashSet<string> specialVersions, IReadOnlyDictionary<string, LibraryItem> all,
+            Dictionary<(string, NuGetVersion), LibraryItem> discarded)
         {
-            m_solutionsContext = sc;
-            SetNuGetDependencies(packageFolder, framework, specialVersions, all,
+            SetNuGetDependencies(packageFolders, framework, specialVersions, all, discarded,
                 dep => !(dep.VersionRange.Equals(C.V1.Range) && sc.ProjectsByAssemblyName.ContainsKey(dep.Id)));
         }
 

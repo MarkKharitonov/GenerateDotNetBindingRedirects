@@ -8,19 +8,19 @@ using NuGet.Packaging.Core;
 using NuGet.ProjectModel;
 using NuGet.Versioning;
 
-namespace GenerateBindingRedirects
+namespace Dayforce.CSharp.ProjectAssets
 {
-    public partial class ProjectAssets
+    public class ProjectAssets
     {
         public readonly IReadOnlyDictionary<string, LibraryItem> Libraries;
-        public readonly string PackageFolder;
-        public readonly IReadOnlyDictionary<(string, Version), AssemblyBindingRedirect> FrameworkRedistList;
+        public readonly List<string> PackageFolders;
+        public readonly NuGetFramework TargetFramework;
 
         public ProjectAssets(SolutionsContext sc)
         {
-            NuGetFramework framework = null;
             ProjectContext firstProject = null;
             SortedDictionary<string, LibraryItem> libs = null;
+            Dictionary<(string, NuGetVersion), LibraryItem> discarded = null;
             var specialVersions = new HashSet<string>(C.IgnoreCase);
             foreach (var project in sc.YieldProjects())
             {
@@ -29,7 +29,7 @@ namespace GenerateBindingRedirects
                 {
                     continue;
                 }
-                Log.Save(projectAssetsJsonFilePath);
+                Log.Instance.Save(projectAssetsJsonFilePath);
 
                 if (libs == null)
                 {
@@ -41,84 +41,54 @@ namespace GenerateBindingRedirects
                     continue;
                 }
 
-                var (projectAssets, versionRanges) = ProcessProjectFile(sc, project, projectAssetsJsonFilePath, libs);
+                var (projectAssets, versionRanges) = ProcessProjectFile(sc, project, projectAssetsJsonFilePath, libs, ref PackageFolders, ref discarded);
 
-                if (framework == null)
+                if (TargetFramework == null)
                 {
-                    PackageFolder = YieldMainPackageFolders(projectAssets).First().Path;
-                    framework = projectAssets.Targets[0].TargetFramework;
+                    TargetFramework = projectAssets.Targets[0].TargetFramework;
                     firstProject = project;
                 }
 
-                libs[project.AssemblyName] = GetProjectLib(firstProject, project.AssemblyName, framework,
-                    projectAssets.Targets[0].Libraries, versionRanges);
+                libs[project.AssemblyName] = GetProjectLib(firstProject, project.AssemblyName, projectAssets.Targets[0].Libraries, versionRanges);
 
                 specialVersions.UnionWith(projectAssets.ProjectFileDependencyGroups[0].Dependencies.Where(o => o.Contains("*")));
             }
 
-            Log.WriteVerbose("ProjectAssets({0}) : {1} libraries", firstProject, libs?.Count);
+            Log.Instance.WriteVerbose("ProjectAssets({0}) : {1} libraries", firstProject, libs?.Count);
             if (libs == null)
             {
                 return;
             }
 
             Libraries = libs;
-
-            Libraries.Values.ForEach(o => o.CompleteConstruction(PackageFolder, framework, sc, specialVersions, Libraries));
-            FrameworkRedistList = GetFrameworkRedistList(framework);
+            Libraries.Values.ForEach(o => o.CompleteConstruction(PackageFolders, TargetFramework, sc, specialVersions, Libraries, discarded));
         }
 
-        private IReadOnlyDictionary<(string, Version), AssemblyBindingRedirect> GetFrameworkRedistList(NuGetFramework framework)
-        {
-            var version = framework.DotNetFrameworkName.Replace($"{framework.Framework},Version=", "");
-            string path = @$"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\{framework.Framework}\{version}\RedistList\FrameworkList.xml";
-            return XDocument
-                .Load(path)
-                .Element("FileList")
-                .Elements("File")
-                .Select(e => new AssemblyBindingRedirect(
-                    e.Attribute("AssemblyName").Value,
-                    Version.Parse(e.Attribute("Version").Value),
-                    e.Attribute("Culture").Value,
-                    e.Attribute("PublicKeyToken").Value))
-                .ToDictionary(a => (a.AssemblyName, a.Version));
-        }
-
-        private static LibraryItem GetProjectLib(ProjectContext firstProject, string asmName, NuGetFramework framework,
+        private LibraryItem GetProjectLib(ProjectContext firstProject, string asmName,
             ICollection<LockFileTargetLibrary> projectDependencies, IDictionary<string, VersionRange> versionRanges)
         {
-            Log.WriteVerbose("ProjectAssets({0}) : {1}/{2}", firstProject, asmName, C.V1.Value);
+            Log.Instance.WriteVerbose("ProjectAssets({0}) : {1}/{2}", firstProject, asmName, C.V1.Value);
             return LibraryItem.Create(new LockFileTargetLibrary
             {
                 Name = asmName,
                 Version = C.V1.Value,
                 Type = C.PROJECT,
-                Framework = framework.DotNetFrameworkName,
+                Framework = TargetFramework.DotNetFrameworkName,
                 RuntimeAssemblies = new[] { new LockFileItem($"bin/placeholder/{asmName}.dll") },
                 Dependencies = projectDependencies.Select(lib => new PackageDependency(lib.Name, GetVersionRange(versionRanges, lib))).ToList()
-            }, C.V1.Range);
+            }, C.V1.Range, PackageFolders);
         }
 
         private static VersionRange GetVersionRange(IDictionary<string, VersionRange> versionRanges, LockFileTargetLibrary lib) =>
             versionRanges.TryGetValue(lib.Name, out var versionRange) ? versionRange : new VersionRange(lib.Version);
 
         private static (LockFile projectAssets, IDictionary<string, VersionRange> versionRanges) ProcessProjectFile(SolutionsContext sc, ProjectContext project, string projectAssetsJsonFilePath,
-            IDictionary<string, LibraryItem> libs)
+            IDictionary<string, LibraryItem> libs, ref List<string> packageFolders,
+            ref Dictionary<(string, NuGetVersion), LibraryItem> discarded)
         {
             try
             {
                 var projectAssets = new LockFileFormat().Read(projectAssetsJsonFilePath);
-                var mainPackageFolders = YieldMainPackageFolders(projectAssets).ToList();
-                if (mainPackageFolders.Count != 1)
-                {
-                    var pkgFolders = "";
-                    if (mainPackageFolders.Count > 1)
-                    {
-                        pkgFolders = " - " + string.Join(" , ", mainPackageFolders.Select(o => o.Path));
-                    }
-                    throw new ApplicationException($"Expected to find exactly one nuget package folder ending with \"\\.nuget\\packages\" . {projectAssetsJsonFilePath} lists {mainPackageFolders.Count}{pkgFolders}");
-                }
-
                 sc.NormalizeProjectAssets(project, projectAssets.Targets[0].Libraries);
 
                 var resolved = projectAssets.Targets[0].Libraries
@@ -127,21 +97,40 @@ namespace GenerateBindingRedirects
                     .GroupBy(o => o.Id, C.IgnoreCase)
                     .ToDictionary(g => g.Key, g => VersionRange.CommonSubSet(g.Select(o => o.VersionRange)), C.IgnoreCase);
 
+                if (packageFolders == null)
+                {
+                    packageFolders = projectAssets.PackageFolders.Select(o => o.Path + (o.Path[^1] == '\\' ? "" : "\\")).ToList();
+                    if (packageFolders.Count > 1)
+                    {
+                        Log.Instance.WriteVerbose("ProjectAssets({0}) : using {1} package folders", project, packageFolders.Count);
+                        for (int i = 0; i < packageFolders.Count; ++i)
+                        {
+                            Log.Instance.WriteVerbose("ProjectAssets({0}) :   package folder #{1} - {2}", project, i + 1, packageFolders[i]);
+                        }
+                    }
+                }
+
                 foreach (var lib in projectAssets.Targets[0].Libraries)
                 {
                     if (!libs.TryGetValue(lib.Name, out var prev))
                     {
-                        Log.WriteVerbose("ProjectAssets({0}) : {1}/{2}", project, lib.Name, lib.Version);
-                        libs[lib.Name] = LibraryItem.Create(lib, resolved[lib.Name]);
+                        Log.Instance.WriteVerbose("ProjectAssets({0}) : {1}/{2}", project, lib.Name, lib.Version);
+                        libs[lib.Name] = LibraryItem.Create(lib, resolved[lib.Name], packageFolders);
                     }
                     else if (prev.Version < lib.Version)
                     {
-                        Log.WriteVerbose("ProjectAssets({0}) : {1}/{2} (prev {3})", project, lib.Name, lib.Version, prev.Version);
-                        libs[lib.Name] = LibraryItem.Create(lib, resolved[lib.Name]);
+                        Log.Instance.WriteVerbose("ProjectAssets({0}) : {1}/{2} (prev {3})", project, lib.Name, lib.Version, prev.Version);
+                        SaveDiscarded(ref discarded, prev);
+                        libs[lib.Name] = LibraryItem.Create(lib, resolved[lib.Name], packageFolders);
+                    }
+                    else if (prev.Version > lib.Version)
+                    {
+                        Log.Instance.WriteVerbose("ProjectAssets({0}) : {1}/{2} (discard {3})", project, lib.Name, prev.Version, lib.Version);
+                        SaveDiscarded(ref discarded, LibraryItem.Create(lib, resolved[lib.Name], packageFolders));
                     }
                     else
                     {
-                        Log.WriteVerbose("ProjectAssets({0}) : {1}/{2} (same)", project, lib.Name, lib.Version);
+                        Log.Instance.WriteVerbose("ProjectAssets({0}) : {1}/{2} (same)", project, lib.Name, lib.Version);
                     }
                 }
 
@@ -153,7 +142,13 @@ namespace GenerateBindingRedirects
             }
         }
 
-        private static IEnumerable<LockFileItem> YieldMainPackageFolders(LockFile projectAssets) =>
-            projectAssets.PackageFolders.Where(o => o.Path.EndsWith("\\.nuget\\packages\\") || o.Path.EndsWith("\\.nuget\\packages"));
+        private static void SaveDiscarded(ref Dictionary<(string, NuGetVersion), LibraryItem> discarded, LibraryItem lib)
+        {
+            if (discarded == null)
+            {
+                discarded = new Dictionary<(string, NuGetVersion), LibraryItem>();
+            }
+            discarded[(lib.Name, lib.Version)] = lib;
+        }
     }
 }
