@@ -14,7 +14,7 @@ resources:
   - repository: templates
     type: git
     name: DFDevOps\cicd-templates
-    ref: refs/tags/stable-1
+    ref: refs/tags/stable-2
     # http://tdc1tfsapp01:8080/tfs/DefaultCollection/DFDevOps/_git/cicd-templates    
 
 jobs:
@@ -49,8 +49,8 @@ jobs:
       binDir: $(binDir)
       buildDir: src\GenerateNuGetUsageReport\build
 
-  - template: ci/nuget-push.yml@templates
-
-  - template: ci/nuget-promote.yml@templates
+  - template: ci/nuget-pack-push-promote.yml@templates
+    parameters:
+      packagesToPack: GenerateBindingRedirects.sln
 
   - template: ci/sonar-qube-publish.yml@templates
