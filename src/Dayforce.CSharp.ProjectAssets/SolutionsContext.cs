@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.IO;
 using System.Linq;
 using Microsoft.Build.Construction;
@@ -14,7 +13,6 @@ namespace Dayforce.CSharp.ProjectAssets
         public readonly IReadOnlyDictionary<string, ProjectContext> ProjectsByAssemblyName;
         private readonly IList<string> m_solutions;
         private readonly IReadOnlyDictionary<(string, string), ProjectContext> m_projectsByName;
-        public readonly ProjectContext ThisProjectContext;
 
         public ProjectContext GetProjectByName(string solution, string projectName)
         {
@@ -34,7 +32,7 @@ namespace Dayforce.CSharp.ProjectAssets
             throw new ApplicationException($"The project {projectName} could not be found in any of the solutions {string.Join(" , ", m_solutions)}");
         }
 
-        public SolutionsContext(string solutionsListFile, string projectFilePath, ISolutionsListFileReader slnListFileReader)
+        public SolutionsContext(string solutionsListFile, ISolutionsListFileReader slnListFileReader)
         {
             ProjectContext.Count = 0;
 
@@ -78,14 +76,17 @@ namespace Dayforce.CSharp.ProjectAssets
                     throw new ApplicationException($"ProjectName({pc.ProjectFilePath}) == AssemblyName({pc2.ProjectFilePath})");
                 }
             }
-
-            projectFilePath = Path.GetFullPath(projectFilePath);
-            ThisProjectContext = ProjectsByAssemblyName.Values.FirstOrDefault(pc => pc.ProjectFilePath.Equals(projectFilePath, C.IGNORE_CASE));
         }
 
-        public IEnumerable<ProjectContext> YieldProjects()
+        public ProjectContext GetProjectContext(string projectFilePath)
         {
-            var dllReferences = ThisProjectContext.DllReferences.ToHashSet(C.IgnoreCase);
+            projectFilePath = Path.GetFullPath(projectFilePath);
+            return ProjectsByAssemblyName.Values.FirstOrDefault(pc => pc.ProjectFilePath.Equals(projectFilePath, C.IGNORE_CASE));
+        }
+
+        public IEnumerable<ProjectContext> YieldProjects(ProjectContext focus)
+        {
+            var dllReferences = focus.DllReferences.ToHashSet(C.IgnoreCase);
             dllReferences.IntersectWith(ProjectsByAssemblyName.Keys);
 
             var allDllReferences = new HashSet<string>(C.IgnoreCase);
@@ -100,7 +101,7 @@ namespace Dayforce.CSharp.ProjectAssets
             }
             while (dllReferences.Count > 0);
 
-            yield return ThisProjectContext;
+            yield return focus;
 
             var projects = allDllReferences.Select(asmName => ProjectsByAssemblyName[asmName]).ToList();
             var groupedBySolution = projects

@@ -148,13 +148,14 @@ namespace GenerateBindingRedirects
             bool test = false,
             string nuGetUsageReport = null)
         {
-            var sc = new SolutionsContext(solutionsListFile, projectFilePath, new DayforceSolutionsListFileReader());
-            if (sc.ThisProjectContext == null)
+            var sc = new SolutionsContext(solutionsListFile, new DayforceSolutionsListFileReader());
+            var focus = sc.GetProjectContext(projectFilePath);
+            if (focus == null)
             {
                 throw new ApplicationException($"The project {projectFilePath} cannot be processed, because no solution seems to contain it. Most likely a case of corrupt solution file.");
             }
 
-            var projectAssets = new ProjectAssets(sc);
+            var projectAssets = new ProjectAssets(sc, focus);
 
             if (projectAssets.PackageFolders == null)
             {
@@ -172,7 +173,7 @@ namespace GenerateBindingRedirects
             }
             if (nuGetUsageReport != null)
             {
-                projectAssets.GenerateNuGetUsageReport(sc.ThisProjectContext.ProjectName, nuGetUsageReport);
+                projectAssets.GenerateNuGetUsageReport(focus.ProjectName, nuGetUsageReport);
             }
 
             var dependents = GetDependents(projectAssets);
@@ -236,7 +237,7 @@ namespace GenerateBindingRedirects
 
                 if (writeBindingRedirects || assert)
                 {
-                    var writer = new BindingRedirectsWriter(sc.ThisProjectContext);
+                    var writer = new BindingRedirectsWriter(focus);
                     writer.WriteBindingRedirects(res, assert);
                 }
             }

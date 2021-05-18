@@ -74,20 +74,21 @@ namespace GenerateNuGetUsageReport
                     Log.Instance = verboseLog = new VerboseLog("GenerateNuGetUsageReport", logPath, baseDir, projectFilePath, false);
                     LogFilePath = verboseLog.LogFilePath;
                 }
-                var sc = new SolutionsContext(solutionsListFile, projectFilePath, new SimpleSolutionsListFileReader());
-                if (sc.ThisProjectContext == null)
+                var sc = new SolutionsContext(solutionsListFile, new SimpleSolutionsListFileReader());
+                var focus = sc.GetProjectContext(projectFilePath);
+                if (focus == null)
                 {
                     throw new ApplicationException($"The project {projectFilePath} cannot be processed, because it does not seem to exist in any solution.");
                 }
 
-                var projectAssets = new ProjectAssets(sc);
+                var projectAssets = new ProjectAssets(sc, focus);
 
                 if (projectAssets.PackageFolders == null)
                 {
                     throw new ApplicationException($"No project.assets.json is associated with {projectFilePath} and {solutionsListFile}.");
                 }
 
-                projectAssets.GenerateNuGetUsageReport(sc.ThisProjectContext.ProjectName, nuGetUsageReport);
+                projectAssets.GenerateNuGetUsageReport(focus.ProjectName, nuGetUsageReport);
             }
             catch (ApplicationException exc)
             {

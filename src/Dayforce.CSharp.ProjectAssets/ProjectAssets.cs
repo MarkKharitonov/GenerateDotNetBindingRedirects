@@ -16,13 +16,13 @@ namespace Dayforce.CSharp.ProjectAssets
         public readonly List<string> PackageFolders;
         public readonly NuGetFramework TargetFramework;
 
-        public ProjectAssets(SolutionsContext sc)
+        public ProjectAssets(SolutionsContext sc, ProjectContext focus)
         {
             ProjectContext firstProject = null;
             SortedDictionary<string, LibraryItem> libs = null;
             Dictionary<(string, NuGetVersion), LibraryItem> discarded = null;
             var specialVersions = new HashSet<string>(C.IgnoreCase);
-            foreach (var project in sc.YieldProjects())
+            foreach (var project in sc.YieldProjects(focus))
             {
                 var projectAssetsJsonFilePath = $"{project.ProjectFilePath}\\..\\obj\\project.assets.json";
                 if (!File.Exists(projectAssetsJsonFilePath))
