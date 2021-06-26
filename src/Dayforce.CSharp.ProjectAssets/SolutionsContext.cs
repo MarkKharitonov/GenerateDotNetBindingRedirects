@@ -32,11 +32,14 @@ namespace Dayforce.CSharp.ProjectAssets
             throw new ApplicationException($"The project {projectName} could not be found in any of the solutions {string.Join(" , ", m_solutions)}");
         }
 
-        public SolutionsContext(string solutionsListFile, ISolutionsListFileReader slnListFileReader)
+        public SolutionsContext(string solutionsListFile, ISolutionsListFileReader slnListFileReader, bool allowNonexistingSolutions = false)
         {
             ProjectContext.Count = 0;
 
-            m_solutions = slnListFileReader.YieldSolutionFilePaths(solutionsListFile).ToList();
+            m_solutions = slnListFileReader
+                .YieldSolutionFilePaths(solutionsListFile)
+                .Where(filePath => !allowNonexistingSolutions || File.Exists(filePath))
+                .ToList();
             m_projectsByName = m_solutions
                 .Select(path => (Solution: SolutionFile.Parse(path), SolutionPath: path))
                 .SelectMany(o => o.Solution.ProjectsInOrder.Select(p => (Solution: o.SolutionPath, Project: p)))

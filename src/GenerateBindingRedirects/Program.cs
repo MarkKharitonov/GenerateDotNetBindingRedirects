@@ -49,6 +49,7 @@ namespace GenerateBindingRedirects
             string privateProbingPath = null;
             string[] verboseTargets = null;
             string nuGetUsageReport = null;
+            bool allowNonexistingSolutions = false;
             var options = new OptionSet()
                 .Add("h|help|?", "Show help", _ => help = true)
                 .Add("v|verbose:", $"Produces verbose output. May be given a custom directory path where to collect extended information. Defaults to {logPath}", v => { logPath = v ?? logPath; verbose = true; })
@@ -65,6 +66,7 @@ namespace GenerateBindingRedirects
                 .Add("p|privateProbingPath=", @"Include the <probing privatePath=.../> element in the generated assembly binding redirects.", v => privateProbingPath = v.Replace('\\', '/'))
                 .Add("a|assert", "Asserts that the binding redirects are correct. Mutually exclusive with --writeBindingRedirects.", _ => assert = true)
                 .Add("u|nuGetUsageReport=", "Generate a report listing all the nuget packages on which the given project depends and save it under the given file path.", v => nuGetUsageReport = v)
+                .Add("allowNonexistingSolutions", "Silently skip non existing solutions mentioned in the given solutions list file.", _ => allowNonexistingSolutions = true) 
                 .Add("<>", extraArgs.Add);
             ;
 
@@ -118,7 +120,7 @@ namespace GenerateBindingRedirects
                 }
 
                 Run(projectFilePath, solutionsListFile, outputTargetFiles, outputBindingRedirects, writeBindingRedirects,
-                    privateProbingPath, assert, test, nuGetUsageReport);
+                    privateProbingPath, assert, test, nuGetUsageReport, allowNonexistingSolutions);
             }
             catch (ApplicationException exc)
             {
@@ -146,9 +148,10 @@ namespace GenerateBindingRedirects
             string privateProbingPath = null,
             bool assert = false,
             bool test = false,
-            string nuGetUsageReport = null)
+            string nuGetUsageReport = null,
+            bool allowNonexistingSolutions = false)
         {
-            var sc = new SolutionsContext(solutionsListFile, new DayforceSolutionsListFileReader());
+            var sc = new SolutionsContext(solutionsListFile, new DayforceSolutionsListFileReader(), allowNonexistingSolutions);
             var focus = sc.GetProjectContext(projectFilePath);
             if (focus == null)
             {
