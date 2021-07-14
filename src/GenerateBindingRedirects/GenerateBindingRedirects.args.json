@@ -8,7 +8,7 @@
     },
     {
       "Id": "ebdc9ab5-570b-4959-b4f2-faef08e1a9f1",
-      "Command": "-f C:\\Dayforce\\60\\UI\\Api\\Api.csproj -s C:\\Dayforce\\60\\Build\\projects.yml -w -u c:\\temp"
+      "Command": "-f C:\\Dayforce\\tip2\\UI\\CandidatePortal\\CandidatePortal.csproj -s C:\\Dayforce\\tip2\\Build\\projects.yml -w -u c:\\temp"
     },
     {
       "Id": "f8db089b-5300-45bf-a884-93bfd3bb7312",

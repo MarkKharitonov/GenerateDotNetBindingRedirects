@@ -90,6 +90,7 @@ namespace Dayforce.CSharp.ProjectAssets
         public IEnumerable<ProjectContext> YieldProjects(ProjectContext focus)
         {
             var dllReferences = focus.DllReferences.ToHashSet(C.IgnoreCase);
+            dllReferences.UnionWith(focus.ReferencedProjects.SelectMany(p => p.DllReferences));
             dllReferences.IntersectWith(ProjectsByAssemblyName.Keys);
 
             var allDllReferences = new HashSet<string>(C.IgnoreCase);
