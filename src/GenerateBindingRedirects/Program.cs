@@ -220,7 +220,10 @@ namespace GenerateBindingRedirects
 
             if (outputBindingRedirects != null || writeBindingRedirects || assert)
             {
-                var res = string.Join(Environment.NewLine, assemblyBindingRedirects.OrderBy(r => r.AssemblyName).Select(a => a.Render(privateProbingPath)));
+                var res = string.Join(Environment.NewLine, assemblyBindingRedirects
+                    .Where(r => !string.IsNullOrEmpty(r.PublicKeyToken ))
+                    .OrderBy(r => r.AssemblyName)
+                    .Select(a => a.Render(privateProbingPath)));
                 if (outputBindingRedirects != null)
                 {
                     if (outputBindingRedirects == "-")
@@ -327,12 +330,6 @@ namespace GenerateBindingRedirects
                     var module = ModuleDefinition.ReadModule(runtimeAssembly.FilePath);
                     foreach (var asmRef in module.AssemblyReferences)
                     {
-                        if (asmRef.PublicKeyToken?.Length == 0 && asmRef.PublicKey?.Length == 0)
-                        {
-                            Log.WriteVerbose("AssemblyReferenceOf({0}) : skip {1} ({2}) - unsigned", runtimeAssembly.RelativeFilePath, asmRef.Name, asmRef.Version);
-                            continue;
-                        }
-
                         if (!dependents.TryGetValue(asmRef.Name, out var dependentsByVersion))
                         {
                             var extra = frameworkRedistList.ContainsKey((asmRef.Name, asmRef.Version)) ? "framework assembly" : "unknown";
@@ -448,12 +445,6 @@ namespace GenerateBindingRedirects
                 }
 
                 throw new ApplicationException($"Unable to resolve assembly binding redirect for {asmName}, Version = {maxAsmVersion}.");
-            }
-
-            if (found.Key.IsUnsigned)
-            {
-                Log.WriteVerbose("NewAssemblyBindingRedirect : skip unsigned assembly {0} - {1}", found.Key.RelativeFilePath, found.Key.AssemblyName);
-                return null;
             }
 
             res = new AssemblyBindingRedirect(found.Key.FilePath);
