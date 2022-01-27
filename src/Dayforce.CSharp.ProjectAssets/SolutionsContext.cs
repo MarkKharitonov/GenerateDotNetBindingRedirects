@@ -38,7 +38,7 @@ namespace Dayforce.CSharp.ProjectAssets
 
             m_solutions = slnListFileReader
                 .YieldSolutionFilePaths(solutionsListFile)
-                .Where(filePath => !allowNonexistingSolutions || File.Exists(filePath))
+                .Where(filePath => !filePath.EndsWith("LegacyFrontEnd.sln") && (!allowNonexistingSolutions || File.Exists(filePath)))
                 .ToList();
             m_projectsByName = m_solutions
                 .Select(path => (Solution: SolutionFile.Parse(path), SolutionPath: path))
