@@ -27,8 +27,6 @@ jobs:
   - template: ci/variables.yml@templates
  
   steps:
-  - template: ci/set-branch-build-number.yml@templates
-
   - template: ci/build-and-test.yml@templates
 
   - template: ci/publish-build-artifacts.yml@templates
