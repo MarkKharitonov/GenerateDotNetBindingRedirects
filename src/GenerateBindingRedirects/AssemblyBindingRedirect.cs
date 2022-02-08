@@ -51,7 +51,7 @@ namespace GenerateBindingRedirects
         public override string ToString() => $"{AssemblyName}/{Version} ({PublicKeyToken}, {Culture})";
 
         public string Render(string privateProbingPath) => @$"      <dependentAssembly>
-        <assemblyIdentity name=""{AssemblyName}"" publicKeyToken=""{PublicKeyToken}"" culture=""{Culture}"" />
+        <assemblyIdentity name=""{AssemblyName}"" publicKeyToken=""{(string.IsNullOrEmpty(PublicKeyToken) ? "null" : PublicKeyToken)}"" culture=""{Culture}"" />
         <bindingRedirect oldVersion=""0.0.0.0-{Version}"" newVersion=""{Version}"" />{RenderCodeBaseElement(privateProbingPath)}
       </dependentAssembly>";
 

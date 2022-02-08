@@ -66,7 +66,7 @@ namespace GenerateBindingRedirects
                 .Add("p|privateProbingPath=", @"Include the <probing privatePath=.../> element in the generated assembly binding redirects.", v => privateProbingPath = v.Replace('\\', '/'))
                 .Add("a|assert", "Asserts that the binding redirects are correct. Mutually exclusive with --writeBindingRedirects.", _ => assert = true)
                 .Add("u|nuGetUsageReport=", "Generate a report listing all the nuget packages on which the given project depends and save it under the given file path.", v => nuGetUsageReport = v)
-                .Add("allowNonexistingSolutions", "Silently skip non existing solutions mentioned in the given solutions list file.", _ => allowNonexistingSolutions = true) 
+                .Add("allowNonexistingSolutions", "Silently skip non existing solutions mentioned in the given solutions list file.", _ => allowNonexistingSolutions = true)
                 .Add("<>", extraArgs.Add);
             ;
 
@@ -221,7 +221,7 @@ namespace GenerateBindingRedirects
             if (outputBindingRedirects != null || writeBindingRedirects || assert)
             {
                 var res = string.Join(Environment.NewLine, assemblyBindingRedirects
-                    .Where(r => !string.IsNullOrEmpty(r.PublicKeyToken ))
+                    .Where(r => !string.IsNullOrEmpty(r.PublicKeyToken) || privateProbingPath != null)
                     .OrderBy(r => r.AssemblyName)
                     .Select(a => a.Render(privateProbingPath)));
                 if (outputBindingRedirects != null)
