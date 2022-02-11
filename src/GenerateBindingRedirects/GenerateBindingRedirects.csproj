@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="LibGit2Sharp" Version="0.27.0-preview-0175" />
     <PackageReference Include="Mono.Cecil" Version="0.11.3" />
     <PackageReference Include="Mono.Options" Version="6.6.0.161" />
   </ItemGroup>

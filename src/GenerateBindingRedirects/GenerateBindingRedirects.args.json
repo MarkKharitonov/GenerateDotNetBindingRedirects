@@ -3,6 +3,10 @@
   "Id": "57b5c7dc-fadf-48b3-8999-8cf53b7393d2",
   "Items": [
     {
+      "Id": "fa416e42-580f-4500-8642-0b50934f160f",
+      "Command": "-f C:\\Dayforce\\tip2\\src\\WFM\\EfficiencyEngineTests\\EfficiencyEngineTests.csproj -s C:\\Dayforce\\tip2\\Build\\projects.yml -a"
+    },
+    {
       "Id": "2f3a6547-4414-40ac-99ff-58ee59aca00e",
       "Command": "-f C:\\Dayforce\\60\\Services\\Platform\\AdminService\\AdminService.csproj -t obj\\BindingRedirectTargetFiles.txt -s C:\\Dayforce\\60\\Build\\projects.yml -w -r C:\\Dayforce\\60\\Build\\2010\\Deployer\\Templates\\AssemblyBindingRedirects\\AdminService.txt "
     },

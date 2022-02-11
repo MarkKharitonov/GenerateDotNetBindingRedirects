@@ -2,7 +2,7 @@
   "profiles": {
     "AnalyzeProjectAssets": {
       "commandName": "Project",
-      "commandLineArgs": "-f C:\\Dayforce\\tip2\\UI\\CandidatePortal\\CandidatePortal.csproj -s C:\\Dayforce\\tip2\\Build\\projects.yml -w -u c:\\temp"
+      "commandLineArgs": "-f C:\\Dayforce\\tip2\\src\\WFM\\EfficiencyEngineTests\\EfficiencyEngineTests.csproj -s C:\\Dayforce\\tip2\\Build\\projects.yml -a"
     }
   }
 }

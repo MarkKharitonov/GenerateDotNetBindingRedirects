@@ -113,8 +113,8 @@ namespace Tests
             if (newAppConfig)
             {
                 var projectFile = (string)TestContext.CurrentContext.Test.Arguments[0];
-                var appConfigFile = $"{projectFile}\\..\\app.config";
-                File.Delete(appConfigFile);
+                File.Delete($"{projectFile}\\..\\app.config");
+                File.Delete($"{projectFile}\\..\\.gitignore");
             }
         }
 
@@ -337,7 +337,7 @@ namespace Tests
         }
 
         [TestCaseSource(nameof(NewConfigFileTestCase))]
-        public void AssertFailNoConfigFile(string projectFilePath, string _, bool _1, bool _2)
+        public void ForceAssertFailNoConfigFile(string projectFilePath, string _, bool _1, bool _2)
         {
             if (s_updateExpectedResults)
             {
@@ -353,13 +353,39 @@ namespace Tests
                 $"{GlobalContext.RootDir}\\Input\\Solutions.txt",
                 null,
                 null,
-                false, null, true));
+                false, null, forceAssert: true));
 
             Assert.AreEqual($"{configFilePath} is expected to have some assembly binding redirects, but it does not exist.", exc.Message);
         }
 
         [TestCaseSource(nameof(NewConfigFileTestCase))]
-        public void AssertFailMismatchingBindingRedirectsInConfigFile(string projectFilePath, string _, bool _1, bool _2)
+        public void AssertNoFailNoConfigFile(string projectFilePath, string expectedDir, bool _1, bool _2)
+        {
+            if (s_updateExpectedResults)
+            {
+                Assert.Ignore($"The test is irrelevant when updating the expected results.");
+                return;
+            }
+
+            var configFilePath = Path.GetFullPath($"{projectFilePath}\\..\\app.config");
+            string gitIgnoreFilePath = configFilePath + "\\..\\.gitignore";
+            FileAssert.DoesNotExist(configFilePath);
+            FileAssert.DoesNotExist(gitIgnoreFilePath);
+
+            Program.Run(
+                projectFilePath,
+                $"{GlobalContext.RootDir}\\Input\\Solutions.txt",
+                null,
+                null,
+                false, null, true);
+
+            FileAssert.Exists(configFilePath);
+            FileAssert.Exists(gitIgnoreFilePath);
+            Assert.AreEqual("app.config", File.ReadAllLines(gitIgnoreFilePath).FirstOrDefault());
+        }
+
+        [TestCaseSource(nameof(NewConfigFileTestCase))]
+        public void ForceAssertFailMismatchingBindingRedirectsInConfigFile(string projectFilePath, string _, bool _1, bool _2)
         {
             if (s_updateExpectedResults)
             {
@@ -376,7 +402,7 @@ namespace Tests
                 $"{GlobalContext.RootDir}\\Input\\Solutions.txt",
                 null,
                 null,
-                false, null, true));
+                false, null, forceAssert: true));
 
             Assert.AreEqual($"{configFilePath} does not have the expected set of binding redirects.", exc.Message);
         }

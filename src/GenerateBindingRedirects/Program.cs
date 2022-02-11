@@ -50,6 +50,7 @@ namespace GenerateBindingRedirects
             string[] verboseTargets = null;
             string nuGetUsageReport = null;
             bool allowNonexistingSolutions = false;
+            bool forceAssert = false;
             var options = new OptionSet()
                 .Add("h|help|?", "Show help", _ => help = true)
                 .Add("v|verbose:", $"Produces verbose output. May be given a custom directory path where to collect extended information. Defaults to {logPath}", v => { logPath = v ?? logPath; verbose = true; })
@@ -62,9 +63,14 @@ namespace GenerateBindingRedirects
                 .Add("s|solutions=", "[Required] A file listing all the relevant solutions.", v => solutionsListFile = v)
                 .Add("t|targetFiles=", "Output the target file paths to the given file. Use - to output to console.", v => outputTargetFiles = v)
                 .Add("r|bindingRedirects=", "Output the binding redirects to the given file. Use - to output to console.", v => outputBindingRedirects = v)
-                .Add("w|writeBindingRedirects", "Write the binding redirects to the respective config file. Mutually exclusive with --assert.", _ => writeBindingRedirects = true)
+                .Add("w|writeBindingRedirects", "Write the binding redirects to the respective config file. Mutually exclusive with --assert and --forceAssert. " +
+                                                "If a new app.config file is created, then it is automatically added to the local .gitignore", _ => writeBindingRedirects = true)
                 .Add("p|privateProbingPath=", @"Include the <probing privatePath=.../> element in the generated assembly binding redirects.", v => privateProbingPath = v.Replace('\\', '/'))
-                .Add("a|assert", "Asserts that the binding redirects are correct. Mutually exclusive with --writeBindingRedirects.", _ => assert = true)
+                .Add("a|assert", "Asserts that the binding redirects are correct. Mutually exclusive with --writeBindingRedirects and --forceAssert. " +
+                                    "The parameter behaves as --forceAssert if --bindingRedirects is given. " +
+                                    "The parameter behaves as --writeBindingRedirects otherwise AND if { the app.config file does not exist initially OR if it is not tracked by git }. " +
+                                    "To force the assertion logic in all the cases use the flag --forceAssert.", _ => assert = true)
+                .Add("forceAssert", "Unconditionally asserts that the binding redirects are correct. Mutually exclusive with--writeBindingRedirects and --assert.", _ => forceAssert = true)
                 .Add("u|nuGetUsageReport=", "Generate a report listing all the nuget packages on which the given project depends and save it under the given file path.", v => nuGetUsageReport = v)
                 .Add("allowNonexistingSolutions", "Silently skip non existing solutions mentioned in the given solutions list file.", _ => allowNonexistingSolutions = true)
                 .Add("<>", extraArgs.Add);
@@ -111,6 +117,16 @@ namespace GenerateBindingRedirects
                 LogErrorMessage($"--assert and --writeBindingRedirects are mutually exclusive.");
                 return 2;
             }
+            if (forceAssert && writeBindingRedirects)
+            {
+                LogErrorMessage($"--forceAssert and --writeBindingRedirects are mutually exclusive.");
+                return 2;
+            }
+            if (forceAssert && assert)
+            {
+                LogErrorMessage($"--forceAssert and --assert are mutually exclusive.");
+                return 2;
+            }
 
             try
             {
@@ -120,7 +136,7 @@ namespace GenerateBindingRedirects
                 }
 
                 Run(projectFilePath, solutionsListFile, outputTargetFiles, outputBindingRedirects, writeBindingRedirects,
-                    privateProbingPath, assert, test, nuGetUsageReport, allowNonexistingSolutions);
+                    privateProbingPath, assert, test, nuGetUsageReport, allowNonexistingSolutions, forceAssert);
             }
             catch (ApplicationException exc)
             {
@@ -149,7 +165,8 @@ namespace GenerateBindingRedirects
             bool assert = false,
             bool test = false,
             string nuGetUsageReport = null,
-            bool allowNonexistingSolutions = false)
+            bool allowNonexistingSolutions = false,
+            bool forceAssert = false)
         {
             var sc = new SolutionsContext(solutionsListFile, new DayforceSolutionsListFileReader(), allowNonexistingSolutions);
             var focus = sc.GetProjectContext(projectFilePath);
@@ -218,7 +235,7 @@ namespace GenerateBindingRedirects
                 }
             }
 
-            if (outputBindingRedirects != null || writeBindingRedirects || assert)
+            if (outputBindingRedirects != null || writeBindingRedirects || assert || forceAssert)
             {
                 var res = string.Join(Environment.NewLine, assemblyBindingRedirects
                     .Where(r => !string.IsNullOrEmpty(r.PublicKeyToken) || privateProbingPath != null)
@@ -230,9 +247,10 @@ namespace GenerateBindingRedirects
                     {
                         Console.WriteLine(res);
                     }
-                    else if (assert)
+                    else if (forceAssert || assert)
                     {
                         AssertBindingRedirectsInFile(outputBindingRedirects, res);
+                        forceAssert = true;
                     }
                     else
                     {
@@ -241,10 +259,10 @@ namespace GenerateBindingRedirects
                     }
                 }
 
-                if (writeBindingRedirects || assert)
+                if (writeBindingRedirects || assert || forceAssert)
                 {
                     var writer = new BindingRedirectsWriter(focus);
-                    writer.WriteBindingRedirects(res, assert);
+                    writer.WriteBindingRedirects(res, assert, forceAssert);
                 }
             }
         }
