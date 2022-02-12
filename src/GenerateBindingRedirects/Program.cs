@@ -64,11 +64,11 @@ namespace GenerateBindingRedirects
                 .Add("t|targetFiles=", "Output the target file paths to the given file. Use - to output to console.", v => outputTargetFiles = v)
                 .Add("r|bindingRedirects=", "Output the binding redirects to the given file. Use - to output to console.", v => outputBindingRedirects = v)
                 .Add("w|writeBindingRedirects", "Write the binding redirects to the respective config file. Mutually exclusive with --assert and --forceAssert. " +
-                                                "If a new app.config file is created, then it is automatically added to the local .gitignore", _ => writeBindingRedirects = true)
+                                                "If a new app.config file is created, then it is automatically added to the local .gitignore, which is created if needed.", _ => writeBindingRedirects = true)
                 .Add("p|privateProbingPath=", @"Include the <probing privatePath=.../> element in the generated assembly binding redirects.", v => privateProbingPath = v.Replace('\\', '/'))
                 .Add("a|assert", "Asserts that the binding redirects are correct. Mutually exclusive with --writeBindingRedirects and --forceAssert. " +
                                     "The parameter behaves as --forceAssert if --bindingRedirects is given. " +
-                                    "The parameter behaves as --writeBindingRedirects otherwise AND if { the app.config file does not exist initially OR if it is not tracked by git }. " +
+                                    "The parameter behaves as --writeBindingRedirects (except it does not create .gitignore) otherwise AND if { the app.config file does not exist initially OR if it is not tracked by git }. " +
                                     "To force the assertion logic in all the cases use the flag --forceAssert.", _ => assert = true)
                 .Add("forceAssert", "Unconditionally asserts that the binding redirects are correct. Mutually exclusive with--writeBindingRedirects and --assert.", _ => forceAssert = true)
                 .Add("u|nuGetUsageReport=", "Generate a report listing all the nuget packages on which the given project depends and save it under the given file path.", v => nuGetUsageReport = v)

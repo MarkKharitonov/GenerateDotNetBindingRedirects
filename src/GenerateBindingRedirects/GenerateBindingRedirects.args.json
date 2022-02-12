@@ -4,7 +4,7 @@
   "Items": [
     {
       "Id": "fa416e42-580f-4500-8642-0b50934f160f",
-      "Command": "-f C:\\Dayforce\\tip2\\src\\WFM\\EfficiencyEngineTests\\EfficiencyEngineTests.csproj -s C:\\Dayforce\\tip2\\Build\\projects.yml -a"
+      "Command": "-f C:\\Dayforce\\tip2\\src\\WFM\\EfficiencyEngineTests\\EfficiencyEngineTests.csproj -s C:\\Dayforce\\tip2\\Build\\projects.yml -w"
     },
     {
       "Id": "2f3a6547-4414-40ac-99ff-58ee59aca00e",

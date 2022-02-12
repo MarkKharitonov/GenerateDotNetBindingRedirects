@@ -85,6 +85,10 @@ namespace GenerateBindingRedirects
 
                 if (!assert)
                 {
+                    if (!File.Exists(ExpectedConfigFilePath))
+                    {
+                        UpdateGitIgnore();
+                    }
                     return false;
                 }
 
@@ -95,10 +99,6 @@ namespace GenerateBindingRedirects
                 }
                 else
                 {
-                    if (!File.Exists(ExpectedConfigFilePath))
-                    {
-                        UpdateGitIgnore();
-                    }
                     assert = false;
                 }
                 return forceAssert;
