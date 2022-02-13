@@ -2,7 +2,7 @@
   "profiles": {
     "AnalyzeProjectAssets": {
       "commandName": "Project",
-      "commandLineArgs": " -s C:\\dayforce\\tip2\\Build\\projects.yml -f C:\\Dayforce\\tip2\\UI\\ReportingTest\\ReportingTest.csproj -a -v -p _BindingRedirects\\ReportingTest"
+      "commandLineArgs": " -s C:\\dayforce\\tip2\\Build\\projects.yml -f C:\\Dayforce\\tip2\\UI\\BusinessAPITest\\BusinessAPITest.csproj -a"
     }
   }
 }

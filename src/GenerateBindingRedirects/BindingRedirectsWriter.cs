@@ -113,6 +113,11 @@ namespace GenerateBindingRedirects
 
             bool IsTrackedByGit()
             {
+                if (!File.Exists(ExpectedConfigFilePath))
+                {
+                    // Even if the file existed and was tracked in the past, if it was deleted let us consider it as untracked.
+                    return false;
+                }
                 var wsPath = ProjectFilePath;
                 while (wsPath.Length > 3 && !Directory.Exists(wsPath + "\\.git"))
                 {
@@ -122,8 +127,10 @@ namespace GenerateBindingRedirects
                 {
                     return true;
                 }
+                // Get the right file case, very important for git.
+                var filePath = Directory.GetFiles(Path.GetDirectoryName(ExpectedConfigFilePath), Path.GetFileName(ExpectedConfigFilePath))[0];
                 var repo = new Repository(wsPath);
-                var objectish = "HEAD:" + ExpectedConfigFilePath[(wsPath.Length + 1)..].Replace('\\', '/');
+                var objectish = "HEAD:" + filePath[(wsPath.Length + 1)..].Replace('\\', '/');
                 return repo.Lookup(objectish, ObjectType.Blob) != null;
             }
 
