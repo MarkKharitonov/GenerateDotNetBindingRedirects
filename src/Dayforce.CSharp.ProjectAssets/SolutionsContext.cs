@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Microsoft.Build.Construction;
+using Newtonsoft.Json;
 using NuGet.Packaging.Core;
 using NuGet.ProjectModel;
 
@@ -11,7 +12,9 @@ namespace Dayforce.CSharp.ProjectAssets
     public class SolutionsContext
     {
         public readonly IReadOnlyDictionary<string, ProjectContext> ProjectsByAssemblyName;
+        [JsonIgnore]
         private readonly IList<string> m_solutions;
+        [JsonIgnore]
         private readonly IReadOnlyDictionary<(string, string), ProjectContext> m_projectsByName;
 
         public ProjectContext GetProjectByName(string solution, string projectName)

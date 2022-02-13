@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,8 +10,10 @@ namespace Dayforce.CSharp.ProjectAssets
 {
     public class ProjectContext
     {
+        [JsonIgnore]
         internal static int Count;
 
+        [JsonIgnore]
         private readonly SolutionsContext m_sc;
         public readonly int Index;
         public readonly string Solution;
@@ -24,9 +27,14 @@ namespace Dayforce.CSharp.ProjectAssets
         public readonly string RelativeProjectFilePath;
         public readonly string RelativeSolutionFilePath;
         private readonly IReadOnlyList<string> m_referencedProjectNames;
+        [JsonIgnore]
         private readonly Lazy<IReadOnlyList<ProjectContext>> m_referencedProjects;
 
+        [JsonIgnore]
         public IReadOnlyList<ProjectContext> ReferencedProjects => m_referencedProjects.Value;
+
+        // Used for the JSON output only
+        public IEnumerable<string> ProjectReferences => ReferencedProjects.Select(o => o.AssemblyName);
 
         public static ProjectContext Create(SolutionsContext sc, string solution, string projectFilePath)
         {

@@ -8,6 +8,7 @@ using System.Xml.Linq;
 using Dayforce.CSharp.ProjectAssets;
 using Mono.Cecil;
 using Mono.Options;
+using Newtonsoft.Json;
 using NuGet.Frameworks;
 using NuGet.ProjectModel;
 using NuGet.Versioning;
@@ -51,6 +52,7 @@ namespace GenerateBindingRedirects
             string nuGetUsageReport = null;
             bool allowNonexistingSolutions = false;
             bool forceAssert = false;
+            bool dumpSolutionContext = false;
             var options = new OptionSet()
                 .Add("h|help|?", "Show help", _ => help = true)
                 .Add("v|verbose:", $"Produces verbose output. May be given a custom directory path where to collect extended information. Defaults to {logPath}", v => { logPath = v ?? logPath; verbose = true; })
@@ -73,6 +75,7 @@ namespace GenerateBindingRedirects
                 .Add("forceAssert", "Unconditionally asserts that the binding redirects are correct. Mutually exclusive with--writeBindingRedirects and --assert.", _ => forceAssert = true)
                 .Add("u|nuGetUsageReport=", "Generate a report listing all the nuget packages on which the given project depends and save it under the given file path.", v => nuGetUsageReport = v)
                 .Add("allowNonexistingSolutions", "Silently skip non existing solutions mentioned in the given solutions list file.", _ => allowNonexistingSolutions = true)
+                .Add("dumpSolutionContext", "Dumps the solution context as JSON and exits. Most of other command line arguments are silently ignored.", _ => dumpSolutionContext = true)
                 .Add("<>", extraArgs.Add);
             ;
 
@@ -92,15 +95,18 @@ namespace GenerateBindingRedirects
                 options.WriteOptionDescriptions(Console.Out);
                 return 2;
             }
-            if (projectFilePath == null)
+            if (!dumpSolutionContext)
             {
-                LogErrorMessage($"--projectFile is required.");
-                return 2;
-            }
-            if (!File.Exists(projectFilePath))
-            {
-                LogErrorMessage($"The file {projectFilePath} does not exist.");
-                return 2;
+                if (projectFilePath == null)
+                {
+                    LogErrorMessage($"--projectFile is required.");
+                    return 2;
+                }
+                if (!File.Exists(projectFilePath))
+                {
+                    LogErrorMessage($"The file {projectFilePath} does not exist.");
+                    return 2;
+                }
             }
             if (solutionsListFile == null)
             {
@@ -136,7 +142,7 @@ namespace GenerateBindingRedirects
                 }
 
                 Run(projectFilePath, solutionsListFile, outputTargetFiles, outputBindingRedirects, writeBindingRedirects,
-                    privateProbingPath, assert, test, nuGetUsageReport, allowNonexistingSolutions, forceAssert);
+                    privateProbingPath, assert, test, nuGetUsageReport, allowNonexistingSolutions, forceAssert, dumpSolutionContext);
             }
             catch (ApplicationException exc)
             {
@@ -166,9 +172,16 @@ namespace GenerateBindingRedirects
             bool test = false,
             string nuGetUsageReport = null,
             bool allowNonexistingSolutions = false,
-            bool forceAssert = false)
+            bool forceAssert = false,
+            bool dumpSolutionContext = false)
         {
             var sc = new SolutionsContext(solutionsListFile, new DayforceSolutionsListFileReader(), allowNonexistingSolutions);
+            if (dumpSolutionContext)
+            {
+                Console.WriteLine(JsonConvert.SerializeObject(sc, Formatting.Indented));
+                return;
+            }
+
             var focus = sc.GetProjectContext(projectFilePath);
             if (focus == null)
             {

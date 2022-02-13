@@ -3,6 +3,10 @@
   "Id": "57b5c7dc-fadf-48b3-8999-8cf53b7393d2",
   "Items": [
     {
+      "Id": "31ef5500-c945-439a-b437-761ae16ffd7d",
+      "Command": "-s C:\\Dayforce\\tip2\\Build\\projects.yml --dumpSolutionContext"
+    },
+    {
       "Id": "fa416e42-580f-4500-8642-0b50934f160f",
       "Command": "-f C:\\Dayforce\\tip2\\src\\WFM\\EfficiencyEngineTests\\EfficiencyEngineTests.csproj -s C:\\Dayforce\\tip2\\Build\\projects.yml -w"
     },
