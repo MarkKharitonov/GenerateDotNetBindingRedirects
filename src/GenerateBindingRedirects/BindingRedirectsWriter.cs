@@ -64,6 +64,7 @@ namespace GenerateBindingRedirects
                 }
             }
 
+            bool createGitIgnore = true;
             if (!WriteConfigFile(bindingRedirects, IsInAssertMode) ||
                 actualAppConfigStatus == ActualAppConfigStatus.Normal ||
                 actualAppConfigStatus == ActualAppConfigStatus.FileNotFound)
@@ -85,10 +86,15 @@ namespace GenerateBindingRedirects
 
                 if (!assert)
                 {
-                    if (!File.Exists(ExpectedConfigFilePath))
+                    if (createGitIgnore)
                     {
-                        UpdateGitIgnore();
+                        createGitIgnore = false;
+                        if (!File.Exists(ExpectedConfigFilePath))
+                        {
+                            UpdateGitIgnore();
+                        }
                     }
+
                     return false;
                 }
 
@@ -99,6 +105,7 @@ namespace GenerateBindingRedirects
                 }
                 else
                 {
+                    createGitIgnore = false;
                     assert = false;
                 }
                 return forceAssert;

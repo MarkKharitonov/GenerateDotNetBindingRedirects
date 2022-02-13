@@ -359,7 +359,7 @@ namespace Tests
         }
 
         [TestCaseSource(nameof(NewConfigFileTestCase))]
-        public void AssertNoFailNoConfigFile(string projectFilePath, string expectedDir, bool _1, bool _2)
+        public void AssertNoFailNoConfigFile(string projectFilePath, string _, bool _1, bool _2)
         {
             if (s_updateExpectedResults)
             {
@@ -380,8 +380,7 @@ namespace Tests
                 false, null, true);
 
             FileAssert.Exists(configFilePath);
-            FileAssert.Exists(gitIgnoreFilePath);
-            Assert.AreEqual("app.config", File.ReadAllLines(gitIgnoreFilePath).FirstOrDefault());
+            FileAssert.DoesNotExist(gitIgnoreFilePath);
         }
 
         [TestCaseSource(nameof(NewConfigFileTestCase))]

@@ -3,6 +3,10 @@
   "Id": "57b5c7dc-fadf-48b3-8999-8cf53b7393d2",
   "Items": [
     {
+      "Id": "788e6b6d-fa47-4e50-8002-257b4d94ad13",
+      "Command": " -s C:\\dayforce\\tip2\\Build\\projects.yml -f C:\\Dayforce\\tip2\\UI\\ReportingTest\\ReportingTest.csproj -a -v -p _BindingRedirects\\ReportingTest"
+    },
+    {
       "Id": "31ef5500-c945-439a-b437-761ae16ffd7d",
       "Command": "-s C:\\Dayforce\\tip2\\Build\\projects.yml --dumpSolutionContext"
     },
