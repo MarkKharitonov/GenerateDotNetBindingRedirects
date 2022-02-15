@@ -17,6 +17,7 @@
     <PropertyGroup Condition="'$(GenerateBindingRedirectsForTest)' == True">
       <CodeBaseInBindingRedirectsForTest>_BindingRedirects\$(MSBuildProjectName)</CodeBaseInBindingRedirectsForTest>
       <GenerateBindingRedirectsFlags>$(GenerateBindingRedirectsFlags) --privateProbingPath $(CodeBaseInBindingRedirectsForTest)</GenerateBindingRedirectsFlags>
+      <GenerateBindingRedirectsFlags Condition="'$(IsUnitTestProject)' == true">$(GenerateBindingRedirectsFlags) --includeUnsigned</GenerateBindingRedirectsFlags>
       <BindingRedirectTargetFolder>$(OutDir)$(CodeBaseInBindingRedirectsForTest)</BindingRedirectTargetFolder>
     </PropertyGroup>
 

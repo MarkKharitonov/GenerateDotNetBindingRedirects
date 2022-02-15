@@ -53,6 +53,7 @@ namespace GenerateBindingRedirects
             bool allowNonexistingSolutions = false;
             bool forceAssert = false;
             bool dumpSolutionContext = false;
+            bool includeUnsigned = false;
             var options = new OptionSet()
                 .Add("h|help|?", "Show help", _ => help = true)
                 .Add("v|verbose:", $"Produces verbose output. May be given a custom directory path where to collect extended information. Defaults to {logPath}", v => { logPath = v ?? logPath; verbose = true; })
@@ -76,6 +77,7 @@ namespace GenerateBindingRedirects
                 .Add("u|nuGetUsageReport=", "Generate a report listing all the nuget packages on which the given project depends and save it under the given file path.", v => nuGetUsageReport = v)
                 .Add("allowNonexistingSolutions", "Silently skip non existing solutions mentioned in the given solutions list file.", _ => allowNonexistingSolutions = true)
                 .Add("dumpSolutionContext", "Dumps the solution context as JSON and exits. Most of other command line arguments are silently ignored.", _ => dumpSolutionContext = true)
+                .Add("iu|includeUnsigned", "Instructs the tool to include binding redirects for unsigned dependencies. Considered only if --privateProbingPath is given.", _ => includeUnsigned = true)
                 .Add("<>", extraArgs.Add);
             ;
 
@@ -133,6 +135,10 @@ namespace GenerateBindingRedirects
                 LogErrorMessage($"--forceAssert and --assert are mutually exclusive.");
                 return 2;
             }
+            if (privateProbingPath == null)
+            {
+                includeUnsigned = false;
+            }
 
             try
             {
@@ -142,7 +148,8 @@ namespace GenerateBindingRedirects
                 }
 
                 Run(projectFilePath, solutionsListFile, outputTargetFiles, outputBindingRedirects, writeBindingRedirects,
-                    privateProbingPath, assert, test, nuGetUsageReport, allowNonexistingSolutions, forceAssert, dumpSolutionContext);
+                    privateProbingPath, assert, test, nuGetUsageReport, allowNonexistingSolutions, forceAssert, dumpSolutionContext,
+                    includeUnsigned);
             }
             catch (ApplicationException exc)
             {
@@ -173,7 +180,8 @@ namespace GenerateBindingRedirects
             string nuGetUsageReport = null,
             bool allowNonexistingSolutions = false,
             bool forceAssert = false,
-            bool dumpSolutionContext = false)
+            bool dumpSolutionContext = false,
+            bool includeUnsigned = false)
         {
             var sc = new SolutionsContext(solutionsListFile, new DayforceSolutionsListFileReader(), allowNonexistingSolutions);
             if (dumpSolutionContext)
@@ -251,7 +259,7 @@ namespace GenerateBindingRedirects
             if (outputBindingRedirects != null || writeBindingRedirects || assert || forceAssert)
             {
                 var res = string.Join(Environment.NewLine, assemblyBindingRedirects
-                    .Where(r => !string.IsNullOrEmpty(r.PublicKeyToken) || privateProbingPath != null)
+                    .Where(r => !string.IsNullOrEmpty(r.PublicKeyToken) || includeUnsigned)
                     .OrderBy(r => r.AssemblyName)
                     .Select(a => a.Render(privateProbingPath)));
                 if (outputBindingRedirects != null)
