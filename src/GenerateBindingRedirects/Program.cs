@@ -277,6 +277,10 @@ namespace GenerateBindingRedirects
         <codeBase version=""{r.Version}"" href=""{dstFilePath}"" />""";
                         string fullDstFilePath = Path.Combine(outDir, dstFilePath);
                         CopyFile(r.TargetFilePath, fullDstFilePath);
+                        if (r.TargetFilePath.EndsWith("/Confluent.Kafka.dll", C.IGNORE_CASE))
+                        {
+                            HandleConfluentKafka(projectAssets, fullDstFilePath);
+                        }
                     }
                     rendered.Add(@$"      <dependentAssembly>
         <assemblyIdentity name=""{r.AssemblyName}"" publicKeyToken=""{(string.IsNullOrEmpty(r.PublicKeyToken) ? "null" : r.PublicKeyToken)}"" culture=""{r.Culture}"" />
@@ -306,6 +310,19 @@ namespace GenerateBindingRedirects
                 {
                     var writer = new BindingRedirectsWriter(focus);
                     writer.WriteBindingRedirects(res, assert, forceAssert);
+                }
+            }
+        }
+
+        private static void HandleConfluentKafka(ProjectAssets projectAssets, string dstFilePath)
+        {
+            if (projectAssets.Libraries.TryGetValue("librdkafka.redist", out var lib) && lib is PackageItem package)
+            {
+                foreach (var dll in package.RuntimeTargets.Where(o => o.Contains("/win-x")))
+                {
+                    string platformArchitecture = dll.Contains("/win-x64") ? "x64" : "x86";
+                    string fullDstFilePath = Path.GetFullPath(dstFilePath + $"/../librdkafka/{platformArchitecture}/{Path.GetFileName(dll)}");
+                    CopyFile(dll, fullDstFilePath);
                 }
             }
         }

@@ -13,9 +13,13 @@ namespace Dayforce.CSharp.ProjectAssets
     {
         public override VersionRange VersionRange { get; }
         public IReadOnlyList<RuntimeAssembly> RuntimeAssemblies { get; private set; }
+        public IReadOnlyList<string> RuntimeTargets { get; private set; }
 
         [JsonIgnore]
         public override bool HasRuntimeAssemblies => RuntimeAssemblies.Count > 0;
+
+        [JsonIgnore]
+        public override bool HasRuntimeTargets => RuntimeTargets.Count > 0;
 
         public bool ShouldSerializeRuntimeAssemblies() => RuntimeAssemblies.Count > 0;
 
@@ -41,6 +45,10 @@ namespace Dayforce.CSharp.ProjectAssets
                     return new RuntimeAssembly(packageFolder, filePath);
                 })
                 .OrderBy(o => o.RelativeFilePath)
+                .ToList();
+            RuntimeTargets = Library.RuntimeTargets
+                .Select(o => baseDirs.Select(baseDir => baseDir + o.Path).FirstOrDefault(File.Exists))
+                .Where(filePath => filePath != null)
                 .ToList();
         }
 

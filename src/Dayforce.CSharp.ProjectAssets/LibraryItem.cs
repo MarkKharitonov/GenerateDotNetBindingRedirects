@@ -31,6 +31,9 @@ namespace Dayforce.CSharp.ProjectAssets
         [JsonIgnore]
         public abstract bool HasRuntimeAssemblies { get; }
 
+        [JsonIgnore]
+        public abstract bool HasRuntimeTargets { get; }
+
         public static LibraryItem Create(LockFileTargetLibrary library, VersionRange versionRange, List<string> packageFolders) =>
             library.Type == C.PACKAGE ? new PackageItem(library, versionRange, packageFolders) : (LibraryItem)new ProjectItem(library);
 

@@ -10,6 +10,8 @@ namespace Dayforce.CSharp.ProjectAssets
     {
         [JsonIgnore]
         public override bool HasRuntimeAssemblies => true;
+        [JsonIgnore]
+        public override bool HasRuntimeTargets => true;
 
         public ProjectItem(LockFileTargetLibrary library) : base(library)
         {
