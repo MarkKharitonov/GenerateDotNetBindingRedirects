@@ -2,7 +2,8 @@
   "profiles": {
     "AnalyzeProjectAssets": {
       "commandName": "Project",
-      "commandLineArgs": " -s C:\\dayforce\\tip2\\Build\\projects.yml -f C:\\Dayforce\\tip2\\UI\\BusinessAPITest\\BusinessAPITest.csproj -a"
+      "commandLineArgs": "-f Test\\DFAcceptanceTest\\DFAcceptanceTest\\SpecFlowTest.HR.API\\SpecFlowTest.HR.API.csproj -t obj\\BindingRedirectTargetFiles.txt -s Build\\projects.yml -w -p -o bin\\Test\\DFAcceptanceTest\\ ",
+      "workingDirectory": "c:\\dayforce\\tip"
     }
   }
 }

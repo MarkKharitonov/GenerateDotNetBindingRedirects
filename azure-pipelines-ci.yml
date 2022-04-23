@@ -7,7 +7,7 @@ trigger:
 variables:
   binDir: bin\Release\netcoreapp3.1
 
-name: 2.2.$(Date:yy)$(DayOfYear)$(Rev:.r)
+name: 2.3.$(Date:yy)$(DayOfYear)$(Rev:.r)
 
 resources:
   repositories:

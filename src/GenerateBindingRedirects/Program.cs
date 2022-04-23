@@ -47,13 +47,14 @@ namespace GenerateBindingRedirects
             string logPath = VerboseLog.DefaultLogDirectory;
             List<string> extraArgs = new List<string>();
             var test = false;
-            string privateProbingPath = null;
+            bool usePrivateProbingPath = false;
             string[] verboseTargets = null;
             string nuGetUsageReport = null;
             bool allowNonexistingSolutions = false;
             bool forceAssert = false;
             bool dumpSolutionContext = false;
             bool includeUnsigned = false;
+            string outDir = null;
             var options = new OptionSet()
                 .Add("h|help|?", "Show help", _ => help = true)
                 .Add("v|verbose:", $"Produces verbose output. May be given a custom directory path where to collect extended information. Defaults to {logPath}", v => { logPath = v ?? logPath; verbose = true; })
@@ -64,11 +65,12 @@ namespace GenerateBindingRedirects
                 .Add("debugMode=", $"Debug mode. One of {string.Join(" , ", Enum.GetNames(typeof(DebugMode)))} . Defaults to {debugMode} .", (DebugMode v) => debugMode = v)
                 .Add("f|projectFile=", "[Required] The project file.", v => projectFilePath = v)
                 .Add("s|solutions=", "[Required] A file listing all the relevant solutions.", v => solutionsListFile = v)
+                .Add("o|outDir=", "The location where to copy the target files. Will be modified if --usePrivateProbingPath is used.", v => outDir = v)
                 .Add("t|targetFiles=", "Output the target file paths to the given file. Use - to output to console.", v => outputTargetFiles = v)
                 .Add("r|bindingRedirects=", "Output the binding redirects to the given file. Use - to output to console.", v => outputBindingRedirects = v)
                 .Add("w|writeBindingRedirects", "Write the binding redirects to the respective config file. Mutually exclusive with --assert and --forceAssert. " +
                                                 "If a new app.config file is created, then it is automatically added to the local .gitignore, which is created if needed.", _ => writeBindingRedirects = true)
-                .Add("p|privateProbingPath=", @"Include the <probing privatePath=.../> element in the generated assembly binding redirects.", v => privateProbingPath = v.Replace('\\', '/'))
+                .Add("p|usePrivateProbingPath", @"Include the <probing privatePath=.../> element in the generated assembly binding redirects.", _ => usePrivateProbingPath = true)
                 .Add("a|assert", "Asserts that the binding redirects are correct. Mutually exclusive with --writeBindingRedirects and --forceAssert. " +
                                     "The parameter behaves as --forceAssert if --bindingRedirects is given. " +
                                     "The parameter behaves as --writeBindingRedirects (except it does not create .gitignore) otherwise AND if { the app.config file does not exist initially OR if it is not tracked by git }. " +
@@ -135,7 +137,7 @@ namespace GenerateBindingRedirects
                 LogErrorMessage($"--forceAssert and --assert are mutually exclusive.");
                 return 2;
             }
-            if (privateProbingPath == null)
+            if (!usePrivateProbingPath)
             {
                 includeUnsigned = false;
             }
@@ -148,8 +150,8 @@ namespace GenerateBindingRedirects
                 }
 
                 Run(projectFilePath, solutionsListFile, outputTargetFiles, outputBindingRedirects, writeBindingRedirects,
-                    privateProbingPath, assert, test, nuGetUsageReport, allowNonexistingSolutions, forceAssert, dumpSolutionContext,
-                    includeUnsigned);
+                    outDir, assert, test, nuGetUsageReport, allowNonexistingSolutions, forceAssert, dumpSolutionContext,
+                    includeUnsigned, usePrivateProbingPath);
             }
             catch (ApplicationException exc)
             {
@@ -174,14 +176,15 @@ namespace GenerateBindingRedirects
         private static void LogErrorMessage(string msg) => Console.WriteLine("GenerateBindingRedirects: ERROR: " + msg);
 
         public static void Run(string projectFilePath, string solutionsListFile, string outputTargetFiles, string outputBindingRedirects, bool writeBindingRedirects,
-            string privateProbingPath = null,
+            string outDir = null,
             bool assert = false,
             bool test = false,
             string nuGetUsageReport = null,
             bool allowNonexistingSolutions = false,
             bool forceAssert = false,
             bool dumpSolutionContext = false,
-            bool includeUnsigned = false)
+            bool includeUnsigned = false,
+            bool usePrivateProbingPath = false)
         {
             var sc = new SolutionsContext(solutionsListFile, new DayforceSolutionsListFileReader(), allowNonexistingSolutions);
             if (dumpSolutionContext)
@@ -258,10 +261,29 @@ namespace GenerateBindingRedirects
 
             if (outputBindingRedirects != null || writeBindingRedirects || assert || forceAssert)
             {
-                var res = string.Join(Environment.NewLine, assemblyBindingRedirects
-                    .Where(r => !string.IsNullOrEmpty(r.PublicKeyToken) || includeUnsigned)
-                    .OrderBy(r => r.AssemblyName)
-                    .Select(a => a.Render(privateProbingPath)));
+                if (outDir != null && !Path.IsPathRooted(outDir))
+                {
+                    outDir = Path.GetFullPath(outDir);
+                }
+
+                var rendered = new List<string>();
+                foreach (var r in assemblyBindingRedirects.Where(r => !string.IsNullOrEmpty(r.PublicKeyToken) || includeUnsigned).OrderBy(r => r.AssemblyName))
+                {
+                    string codeBase = null;
+                    if (usePrivateProbingPath && outDir != null && r.TargetFilePath != null && !r.IsFrameworkAssembly)
+                    {
+                        var dstFilePath = $"_BindingRedirects/{r.AssemblyName}/{r.Version}/{Path.GetFileName(r.TargetFilePath)}";
+                        codeBase = @$"
+        <codeBase version=""{r.Version}"" href=""{dstFilePath}"" />""";
+                        string fullDstFilePath = Path.Combine(outDir, dstFilePath);
+                        CopyFile(r.TargetFilePath, fullDstFilePath);
+                    }
+                    rendered.Add(@$"      <dependentAssembly>
+        <assemblyIdentity name=""{r.AssemblyName}"" publicKeyToken=""{(string.IsNullOrEmpty(r.PublicKeyToken) ? "null" : r.PublicKeyToken)}"" culture=""{r.Culture}"" />
+        <bindingRedirect oldVersion=""0.0.0.0-{r.Version}"" newVersion=""{r.Version}"" />{codeBase}
+      </dependentAssembly>");
+                }
+                var res = string.Join(Environment.NewLine, rendered);
                 if (outputBindingRedirects != null)
                 {
                     if (outputBindingRedirects == "-")
@@ -286,6 +308,28 @@ namespace GenerateBindingRedirects
                     writer.WriteBindingRedirects(res, assert, forceAssert);
                 }
             }
+        }
+
+        private static void CopyFile(string srcFilePath, string dstFilePath)
+        {
+            if (!File.Exists(dstFilePath))
+            {
+                Directory.CreateDirectory(dstFilePath + "\\..");
+                try
+                {
+                    File.Copy(srcFilePath, dstFilePath);
+                    Log.WriteVerbose($"Copied {srcFilePath} over to {dstFilePath}");
+                    return;
+                }
+                catch (IOException exc)
+                {
+                    if ((uint)exc.HResult != 0x80070050)
+                    {
+                        throw;
+                    }
+                }
+            }
+            Log.WriteVerbose($"Did not copy {srcFilePath} over to {dstFilePath} - file exists.");
         }
 
         private static IReadOnlyDictionary<(string, Version), AssemblyBindingRedirect> GetFrameworkRedistList(NuGetFramework framework)

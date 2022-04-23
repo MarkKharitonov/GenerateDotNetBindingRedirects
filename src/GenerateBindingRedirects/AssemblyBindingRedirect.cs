@@ -50,17 +50,6 @@ namespace GenerateBindingRedirects
 
         public override string ToString() => $"{AssemblyName}/{Version} ({PublicKeyToken}, {Culture})";
 
-        public string Render(string privateProbingPath) => @$"      <dependentAssembly>
-        <assemblyIdentity name=""{AssemblyName}"" publicKeyToken=""{(string.IsNullOrEmpty(PublicKeyToken) ? "null" : PublicKeyToken)}"" culture=""{Culture}"" />
-        <bindingRedirect oldVersion=""0.0.0.0-{Version}"" newVersion=""{Version}"" />{RenderCodeBaseElement(privateProbingPath)}
-      </dependentAssembly>";
-
-        private object RenderCodeBaseElement(string privateProbingPath) =>
-            privateProbingPath == null || TargetFilePath == null || IsFrameworkAssembly
-            ? null
-            : @$"
-        <codeBase version=""{Version}"" href=""{privateProbingPath}/{Path.GetFileName(TargetFilePath)}"" />";
-
         public bool Equals([AllowNull] AssemblyBindingRedirect other) => other != null &&
             AssemblyName == other.AssemblyName &&
             PublicKeyToken == other.PublicKeyToken &&

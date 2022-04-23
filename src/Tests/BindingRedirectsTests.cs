@@ -146,7 +146,8 @@ namespace Tests
 
             if (projectFilePath.EndsWith("Tests.csproj"))
             {
-                args.Add("--privateProbingPath=bin");
+                args.Add("--usePrivateProbingPath");
+                args.Add("--outDir=bin");
             }
 
             Assert.Zero(Program.Main(args.ToArray()));
@@ -190,10 +191,12 @@ namespace Tests
 
             try
             {
+                var (outDir, usePrivateProbingPath) = projectFilePath.EndsWith("Tests.csproj") ? ("bin", true) : default;
+
                 Program.Run(
                     projectFilePath,
                     $"{GlobalContext.RootDir}\\Input\\Solutions.txt",
-                    null, null, true, projectFilePath.EndsWith("Tests.csproj") ? "bin" : null);
+                    null, null, true, outDir, usePrivateProbingPath: usePrivateProbingPath);
 
                 FileAssert.AreEqual(expectedConfigFile, actualConfigFile);
             }
@@ -250,10 +253,12 @@ namespace Tests
 
             try
             {
+                var (outDir, usePrivateProbingPath) = projectFilePath.EndsWith("Tests.csproj") ? ("bin", true) : default;
+                
                 Program.Run(
                     projectFilePath,
                     $"{GlobalContext.RootDir}\\Input\\Solutions.txt",
-                    null, null, true, projectFilePath.EndsWith("Tests.csproj") ? "bin" : null);
+                    null, null, true, outDir, usePrivateProbingPath: usePrivateProbingPath);
 
                 FileAssert.AreEqual(expectedConfigFile, actualConfigFile);
             }
@@ -278,12 +283,14 @@ namespace Tests
             var configFile = GetConfigFile(projectFilePath);
             var expectedConfigFileTimestamp = File.GetLastWriteTimeUtc(configFile);
 
+            var (outDir, usePrivateProbingPath) = projectFilePath.EndsWith("Tests.csproj") ? ("bin", true) : default;
+
             Program.Run(
                 projectFilePath,
                 $"{GlobalContext.RootDir}\\Input\\Solutions.txt",
                 actualTargetFilesFilePath,
                 bindingRedirectsFilePath,
-                true, projectFilePath.EndsWith("Tests.csproj") ? "bin" : null, true, true);
+                true, outDir, true, true, usePrivateProbingPath: usePrivateProbingPath);
 
             FileAssert.AreEqual($"{expectedDir}\\TargetFiles.txt", actualTargetFilesFilePath, "Target files do not match");
             Assert.AreEqual(expectedBindingRedirectsFileTimestamp, File.GetLastWriteTimeUtc(bindingRedirectsFilePath), $"The binding redirects file {bindingRedirectsFilePath} was modified.");

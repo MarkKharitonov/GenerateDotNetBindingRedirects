@@ -7,32 +7,31 @@
       <SolutionsListFilePath Condition="Exists('$(WorkspaceRoot)DayforceSolutions.txt')">$(WorkspaceRoot)DayforceSolutions.txt</SolutionsListFilePath>
       <SolutionsListFilePath Condition="!Exists('$(WorkspaceRoot)DayforceSolutions.txt')">$(WorkspaceRoot)Build\projects.yml</SolutionsListFilePath>
       <BindingRedirectTargetFilesPath>$(BaseIntermediateOutputPath)BindingRedirectTargetFiles.txt</BindingRedirectTargetFilesPath>
+      <EffectiveOutDir Condition="'$(WebProjectOutputDir)' != ''">$(WebProjectOutputDir)\bin\</EffectiveOutDir>
+      <EffectiveOutDir Condition="'$(WebProjectOutputDir)' == ''">$(OutDir)</EffectiveOutDir>
       <GenerateBindingRedirectsFlags>--projectFile $(MSBuildProjectFullPath)</GenerateBindingRedirectsFlags>
       <GenerateBindingRedirectsFlags>$(GenerateBindingRedirectsFlags) --targetFiles $(BindingRedirectTargetFilesPath)</GenerateBindingRedirectsFlags>
       <GenerateBindingRedirectsFlags>$(GenerateBindingRedirectsFlags) --solutions $(SolutionsListFilePath)</GenerateBindingRedirectsFlags>
+      <GenerateBindingRedirectsFlags>$(GenerateBindingRedirectsFlags) --outDir $(EffectiveOutDir)</GenerateBindingRedirectsFlags>
       <GenerateBindingRedirectsFlags Condition="'$(Build_BuildUri)' != ''">$(GenerateBindingRedirectsFlags) --assert</GenerateBindingRedirectsFlags>
       <GenerateBindingRedirectsFlags Condition="'$(Build_BuildUri)' == ''">$(GenerateBindingRedirectsFlags) --writeBindingRedirects</GenerateBindingRedirectsFlags>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(GenerateBindingRedirectsForTest)' == True">
-      <CodeBaseInBindingRedirectsForTest>_BindingRedirects\$(MSBuildProjectName)</CodeBaseInBindingRedirectsForTest>
-      <GenerateBindingRedirectsFlags>$(GenerateBindingRedirectsFlags) --privateProbingPath $(CodeBaseInBindingRedirectsForTest)</GenerateBindingRedirectsFlags>
+      <GenerateBindingRedirectsFlags>$(GenerateBindingRedirectsFlags) --usePrivateProbingPath</GenerateBindingRedirectsFlags>
       <GenerateBindingRedirectsFlags Condition="'$(IsUnitTestProject)' == true">$(GenerateBindingRedirectsFlags) --includeUnsigned</GenerateBindingRedirectsFlags>
-      <BindingRedirectTargetFolder>$(OutDir)$(CodeBaseInBindingRedirectsForTest)</BindingRedirectTargetFolder>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(GenerateBindingRedirectsForTest)' != True">
       <BindingRedirectsPath>$(WorkspaceRoot)Build\2010\Deployer\Templates\AssemblyBindingRedirects\$(MSBuildProjectName).txt</BindingRedirectsPath>
-      <BindingRedirectTargetFolder Condition="'$(WebProjectOutputDir)' != ''">$(WebProjectOutputDir)\bin\</BindingRedirectTargetFolder>
-      <BindingRedirectTargetFolder Condition="'$(WebProjectOutputDir)' == ''">$(OutDir)</BindingRedirectTargetFolder>
-      <GenerateBindingRedirectsFlags>$(GenerateBindingRedirectsFlags) --bindingRedirects $(BindingRedirectsPath) --nuGetUsageReport $(BindingRedirectTargetFolder)NuGetUsageReport.json</GenerateBindingRedirectsFlags>
+      <GenerateBindingRedirectsFlags>$(GenerateBindingRedirectsFlags) --bindingRedirects $(BindingRedirectsPath) --nuGetUsageReport $(EffectiveOutDir)NuGetUsageReport.json</GenerateBindingRedirectsFlags>
     </PropertyGroup>
 
     <Error Condition="'$(WorkspaceRoot)' == ''" Text="The WorkspaceRoot build variable must be defined." />
     <Exec Command="$(GenerateBindingRedirectsExe) $(GenerateBindingRedirectsFlags) $(Extra_GenerateBindingRedirectsFlags)" />
     
     <PropertyGroup>
-      <DoNotExpectBindingRedirectTargetFiles Condition="!Exists('$(BindingRedirectTargetFilesPath)')">True</DoNotExpectBindingRedirectTargetFiles>
+      <CopyBindingRedirectTargetFiles Condition="Exists('$(BindingRedirectTargetFilesPath)') And '$(GenerateBindingRedirectsForTest)' != True">True</CopyBindingRedirectTargetFiles>
       <ReplaceAppConfig Condition="'$(WebProjectOutputDir)' == '' And '$(AppConfig)' != 'app.config' And Exists('$(BindingRedirectTargetFilesPath)') And Exists('app.config')">True</ReplaceAppConfig>
     </PropertyGroup>
     <PropertyGroup Condition="'$(ReplaceAppConfig)' == True">
@@ -48,11 +47,10 @@
 
   <Target Name="CopyBindingRedirectTargetFiles"
           BeforeTargets="MvcBuildViews;AfterBuild;RunNUnit"
-          Condition="'$(DoNotExpectBindingRedirectTargetFiles)' != True">
-    <Error Condition="!Exists('$(BindingRedirectTargetFilesPath)')" Text="The file $(BindingRedirectTargetFilesPath) does not exist!" />
+          Condition="'$(CopyBindingRedirectTargetFiles)' == True">
     <ReadLinesFromFile File="$(BindingRedirectTargetFilesPath)">
       <Output TaskParameter="Lines" ItemName="BindingRedirectTargetFile" />
     </ReadLinesFromFile>
-    <Copy SourceFiles="@(BindingRedirectTargetFile)" DestinationFolder="$(BindingRedirectTargetFolder)" Retries="$(CopyRetryCount)" SkipUnchangedFiles="True" />
+    <Copy SourceFiles="@(BindingRedirectTargetFile)" DestinationFolder="$(EffectiveOutDir)" Retries="$(CopyRetryCount)" SkipUnchangedFiles="True" />
   </Target>
 </Project>

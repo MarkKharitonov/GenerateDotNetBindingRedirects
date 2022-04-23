@@ -3,12 +3,16 @@
   "Id": "57b5c7dc-fadf-48b3-8999-8cf53b7393d2",
   "Items": [
     {
+      "Id": "d4df1d3b-c75d-4c48-89cd-6291e9cb6e27",
+      "Command": "-f Test\\DFAcceptanceTest\\DFAcceptanceTest\\SpecFlowTest.HR.API\\SpecFlowTest.HR.API.csproj -t obj\\BindingRedirectTargetFiles.txt -s Build\\projects.yml -w -p -o bin\\Test\\DFAcceptanceTest\\ "
+    },
+    {
       "Id": "d0ffbc95-4e34-490a-b31d-999aae88275f",
-      "Command": " -s C:\\dayforce\\tip2\\Build\\projects.yml -f C:\\Dayforce\\tip2\\UI\\BusinessAPITest\\BusinessAPITest.csproj -a"
+      "Command": " -s C:\\dayforce\\tip\\Build\\projects.yml -f C:\\Dayforce\\tip\\UI\\BusinessAPITest\\BusinessAPITest.csproj -a -p -o c:\\temp"
     },
     {
       "Id": "788e6b6d-fa47-4e50-8002-257b4d94ad13",
-      "Command": " -s C:\\dayforce\\tip2\\Build\\projects.yml -f C:\\Dayforce\\tip2\\UI\\ReportingTest\\ReportingTest.csproj -a -v -p _BindingRedirects\\ReportingTest"
+      "Command": " -s C:\\dayforce\\tip2\\Build\\projects.yml -f C:\\Dayforce\\tip2\\UI\\ReportingTest\\ReportingTest.csproj -a -v -p -o c:\\temp"
     },
     {
       "Id": "31ef5500-c945-439a-b437-761ae16ffd7d",
@@ -28,7 +32,7 @@
     },
     {
       "Id": "f8db089b-5300-45bf-a884-93bfd3bb7312",
-      "Command": "--projectFile C:\\Dayforce\\tip\\Services\\Platform\\CommonTests\\CommonTests.csproj --targetFiles obj\\BindingRedirectTargetFiles.txt --solutions C:\\Dayforce\\tip\\Build\\projects.yml --writeBindingRedirects --privateProbingPath _BindingRedirects\\CommonTests"
+      "Command": "--projectFile C:\\Dayforce\\tip\\Services\\Platform\\CommonTests\\CommonTests.csproj --targetFiles obj\\BindingRedirectTargetFiles.txt --solutions C:\\Dayforce\\tip\\Build\\projects.yml --writeBindingRedirects -p -o c:\\temp"
     },
     {
       "Id": "565bdaac-f113-4118-aefb-6a244cab6af4",
