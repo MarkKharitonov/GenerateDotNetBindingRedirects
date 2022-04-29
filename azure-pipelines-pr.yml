@@ -3,7 +3,7 @@
 trigger: none
 
 variables:
-  binDir: bin\Release\netcoreapp3.1
+  binDir: bin\Release\net5.0
 
 name: 0.0.$(Date:yy)$(DayOfYear)$(Rev:.r)
 

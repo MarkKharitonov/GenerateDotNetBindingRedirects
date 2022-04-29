@@ -3,6 +3,10 @@
   "Id": "57b5c7dc-fadf-48b3-8999-8cf53b7393d2",
   "Items": [
     {
+      "Id": "c0c0958d-e7ce-4fe3-b3b4-d2ccc586d060",
+      "Command": "-f UI\\UnitTests\\UnitTests2.csproj -t obj\\BindingRedirectTargetFiles.txt -s Build\\projects.yml -o bin -w -p --includeUnsigned"
+    },
+    {
       "Id": "d4df1d3b-c75d-4c48-89cd-6291e9cb6e27",
       "Command": "-f Test\\DFAcceptanceTest\\DFAcceptanceTest\\SpecFlowTest.HR.API\\SpecFlowTest.HR.API.csproj -t obj\\BindingRedirectTargetFiles.txt -s Build\\projects.yml -w -p -o bin\\Test\\DFAcceptanceTest\\ "
     },

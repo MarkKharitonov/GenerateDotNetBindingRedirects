@@ -5,7 +5,7 @@ trigger:
 - hotfix/*
 
 variables:
-  binDir: bin\Release\netcoreapp3.1
+  binDir: bin\Release\net5.0
 
 name: 2.3.$(Date:yy)$(DayOfYear)$(Rev:.r)
 
