@@ -2,7 +2,7 @@
   "profiles": {
     "AnalyzeProjectAssets": {
       "commandName": "Project",
-      "commandLineArgs": "-f UI\\UnitTests\\UnitTests2.csproj -t obj\\BindingRedirectTargetFiles.txt -s Build\\projects.yml -o bin -w -p --includeUnsigned",
+      "commandLineArgs": "--projectFile C:\\Dayforce\\tip3\\Test\\DFAcceptanceUnitTest\\DFAcceptanceUnitTest.csproj --targetFiles C:\\Dayforce\\tip3\\Test\\DFAcceptanceUnitTest\\obj\\BindingRedirectTargetFiles.txt --solutions C:\\Dayforce\\tip3\\Build\\projects.yml --outDir C:\\Dayforce\\tip3\\bin.link\\ --writeBindingRedirects --usePrivateProbingPath --includeUnsigned ",
       "workingDirectory": "c:\\dayforce\\tip"
     }
   }

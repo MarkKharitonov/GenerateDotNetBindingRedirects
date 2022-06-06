@@ -32,10 +32,6 @@ namespace Dayforce.CSharp.ProjectAssets
                 .Where(o => o.Path.IsExecutable())
                 .Select(o =>
                 {
-                    if (o.Properties?.Count > 0)
-                    {
-                        Log.Instance.WriteVerbose("PackageItem({0}) : runtime assembly {1} has {2} properties.", Name, o.Path, o.Properties.Count);
-                    }
                     var filePath = baseDirs.Select(baseDir => baseDir + o.Path).FirstOrDefault(File.Exists);
                     if (filePath == null)
                     {

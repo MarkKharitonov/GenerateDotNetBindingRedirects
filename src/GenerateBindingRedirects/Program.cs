@@ -156,13 +156,17 @@ namespace GenerateBindingRedirects
             catch (ApplicationException exc)
             {
                 LogErrorMessage(exc.Message);
+                if (exc.InnerException != null)
+                {
+                    LogErrorMessage(exc.InnerException.ToString());
+                }
                 Log.WriteVerbose(exc);
                 return 3;
             }
             catch (Exception exc)
             {
-                LogErrorMessage(exc.ToString());
                 LogErrorMessage(exc.Message);
+                LogErrorMessage(exc.ToString());
                 Log.WriteVerbose(exc);
                 return 3;
             }
@@ -421,9 +425,9 @@ namespace GenerateBindingRedirects
             // 2. WebGrease.1.5.2 contains WebGrease.dll with the assembly version of 1.5.2.14234
             // 3. Microsoft.AspNet.Web.Optimization.1.1.3 contains System.Web.Optimization.dll which references WebGrease.dll with the assembly version of 1.5.1.25624
             // When NuGet packages lie we have no choice but examine the assemblies
-            var assemblyReferences = new SortedDictionary<(string, Version), HashSet<PackageItem>>();
+            var assemblyReferences = new SortedDictionary<(string, Version), List<PackageItem>>();
 
-            foreach (var package in dependents.Values.SelectMany(v => v.Values.SelectMany(r => r.Values.SelectMany(d => d.Values.SelectMany(l => l).OfType<PackageItem>()))))
+            foreach (var package in dependents.Values.SelectMany(v => v.Values.SelectMany(r => r.Values.SelectMany(d => d.Values.SelectMany(l => l).OfType<PackageItem>()))).Distinct())
             {
                 foreach (var runtimeAssembly in package.RuntimeAssemblies)
                 {
@@ -446,7 +450,7 @@ namespace GenerateBindingRedirects
                         Log.WriteVerbose("AssemblyReferenceOf({0}) : add {1} ({2})", runtimeAssembly.RelativeFilePath, asmRef.Name, asmRef.Version);
                         if (!assemblyReferences.TryGetValue((asmRef.Name, asmRef.Version), out var packages))
                         {
-                            assemblyReferences[(asmRef.Name, asmRef.Version)] = packages = new HashSet<PackageItem>();
+                            assemblyReferences[(asmRef.Name, asmRef.Version)] = packages = new List<PackageItem>();
                         }
                         packages.Add(package);
                     }
@@ -479,7 +483,6 @@ namespace GenerateBindingRedirects
             {
                 foreach (var dep in lib.NuGetDependencies)
                 {
-                    dep.AssertSimple(lib);
                     foreach (var r in dep.RuntimeAssemblyItems)
                     {
                         if (!lib.HasRuntimeAssemblies)

@@ -31,6 +31,7 @@ namespace Tests
 
         public static int RunProcess(this string exe, string arguments)
         {
+#pragma warning disable CA1416 // Validate platform compatibility
             var p = new Process
             {
                 StartInfo = new ProcessStartInfo
@@ -43,6 +44,7 @@ namespace Tests
                     WindowStyle = ProcessWindowStyle.Hidden
                 },
             };
+#pragma warning restore CA1416 // Validate platform compatibility
             p.Start();
             p.WaitForExit();
             return p.ExitCode;

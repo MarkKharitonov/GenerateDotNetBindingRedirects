@@ -78,20 +78,13 @@ namespace Dayforce.CSharp.ProjectAssets
                     {
                         // An SDK style project, in which case just look for the app.config file on disk
                         sdkStyle = true;
-                        var appConfigFiles = Directory.GetFiles(Path.GetDirectoryName(projectFilePath), "app.config", SearchOption.AllDirectories);
-                        if (appConfigFiles.Length > 1)
-                        {
-                            throw new ApplicationException($"Multiple app.config files in an SDK style project ({projectFilePath}) are not supported!");
-                        }
-                        if (appConfigFiles.Length == 1)
-                        {
-                            actualConfigFilePath = appConfigFiles[0];
-                        }
+                        actualConfigFilePath = $"{projectFilePath}\\..\\app.config";
+                        actualConfigFilePath = File.Exists(actualConfigFilePath) ? Path.GetFullPath(actualConfigFilePath) : null;
                     }
                 }
                 return new ProjectContext(sc, solution, projectFilePath, assemblyName, dllReferences, projectReferences, expectedConfigFilePath, actualConfigFilePath, sdkStyle);
             }
-            catch (Exception exc) when (!(exc is ApplicationException))
+            catch (Exception exc) when (exc is not ApplicationException)
             {
                 throw new ApplicationException("Failed to process " + projectFilePath, exc);
             }

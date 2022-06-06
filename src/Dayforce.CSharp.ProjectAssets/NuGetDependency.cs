@@ -44,14 +44,6 @@ namespace Dayforce.CSharp.ProjectAssets
             RuntimeAssemblyItems = runtimeAssemblyItems;
         }
 
-        public void AssertSimple(LibraryItem owner)
-        {
-            if (m_prototype.Include.Count > 0 || m_prototype.Exclude.Count > 0)
-            {
-                throw new ApplicationException($"{owner.Name} has dependency {Id}/{VersionRange} that has Include and/or Exclude.");
-            }
-        }
-
         public string Id => m_prototype.Id;
         public VersionRange VersionRange => m_prototype.VersionRange;
 

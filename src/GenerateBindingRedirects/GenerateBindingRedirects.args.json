@@ -3,6 +3,18 @@
   "Id": "57b5c7dc-fadf-48b3-8999-8cf53b7393d2",
   "Items": [
     {
+      "Id": "06468af7-9c00-408c-b9f0-a321baebcbfe",
+      "Command": "--projectFile C:\\Dayforce\\tip3\\Test\\DFAcceptanceUnitTest\\DFAcceptanceUnitTest.csproj --targetFiles C:\\Dayforce\\tip3\\Test\\DFAcceptanceUnitTest\\obj\\BindingRedirectTargetFiles.txt --solutions C:\\Dayforce\\tip3\\Build\\projects.yml --outDir C:\\Dayforce\\tip3\\bin.link\\ --writeBindingRedirects --usePrivateProbingPath --includeUnsigned "
+    },
+    {
+      "Id": "d8032f0a-2a61-4ce0-9a5e-0020b9529083",
+      "Command": "--projectFile C:\\Dayforce\\tip3\\UI\\Api\\Api.csproj --targetFiles obj\\BindingRedirectTargetFiles.txt --solutions C:\\Dayforce\\tip3\\Build\\projects.yml --outDir C:\\Dayforce\\tip3\\bin.link\\_PublishedWebsites\\Api\\bin\\ --writeBindingRedirects --bindingRedirects C:\\Dayforce\\tip3\\Build\\2010\\Deployer\\Templates\\AssemblyBindingRedirects\\Api.txt --nuGetUsageReport C:\\Dayforce\\tip3\\bin.link\\_PublishedWebsites\\Api\\bin\\NuGetUsageReport.json"
+    },
+    {
+      "Id": "e5c0d3d5-30bc-4696-b29f-5fb6ff11ce7d",
+      "Command": "--projectFile C:\\Dayforce\\tip3\\Test\\DFAcceptanceTest\\DFAcceptanceTest\\SpecFlowTest.DFAssistant\\SpecFlowTest.DFAssistant.csproj --targetFiles C:\\Dayforce\\tip3\\Test\\DFAcceptanceTest\\DFAcceptanceTest\\SpecFlowTest.DFAssistant\\obj\\BindingRedirectTargetFiles.txt --solutions C:\\Dayforce\\tip3\\Build\\projects.yml --outDir C:\\Dayforce\\tip3\\bin.link\\Test\\DFAcceptanceTest\\ --writeBindingRedirects --usePrivateProbingPath"
+    },
+    {
       "Id": "c0c0958d-e7ce-4fe3-b3b4-d2ccc586d060",
       "Command": "-f UI\\UnitTests\\UnitTests2.csproj -t obj\\BindingRedirectTargetFiles.txt -s Build\\projects.yml -o bin -w -p --includeUnsigned"
     },
